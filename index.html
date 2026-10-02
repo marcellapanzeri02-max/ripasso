@@ -1,0 +1,1232 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ripasso</title>
+<meta name="description" content="Carica i panieri delle tue materie, con le risposte, e studia con i quiz.">
+<meta name="theme-color" content="#17203A">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Ripasso">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"></script>
+<style>
+:root{
+  --paper:#EEF1F6;--card:#FFFFFF;--ink:#17203A;--muted:#5A6580;--line:#D3DAE6;
+  --hl:#F6D64A;--hl-ink:#17203A;--ok:#1F7A58;--ok-bg:#DCF0E6;--bad:#B3343F;--bad-bg:#F8E0E2;--accent:#2B3FA8;
+  box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --paper:#0F1424;--card:#182039;--ink:#E6EAF4;--muted:#9AA5BF;--line:#2B3554;
+    --hl:#E9C93A;--hl-ink:#17203A;--ok:#63CFA3;--ok-bg:#163A2E;--bad:#F2838D;--bad-bg:#3E1F27;--accent:#93A6FF;color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0F1424;--card:#182039;--ink:#E6EAF4;--muted:#9AA5BF;--line:#2B3554;
+  --hl:#E9C93A;--hl-ink:#17203A;--ok:#63CFA3;--ok-bg:#163A2E;--bad:#F2838D;--bad-bg:#3E1F27;--accent:#93A6FF;color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--paper);color:var(--ink);font:17px/1.55 "Atkinson Hyperlegible",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-text-size-adjust:100%}
+h1,h2,h3{font-family:"Bricolage Grotesque","Atkinson Hyperlegible",system-ui,sans-serif;margin:0;line-height:1.15}
+#app{max-width:640px;margin:0 auto;padding:22px 18px 64px}
+button{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-radius:10px}
+
+.hero{margin:18px 0 26px}
+.hero h1{font-size:clamp(44px,13vw,68px);font-weight:800;letter-spacing:-.02em}
+.mark{background:linear-gradient(transparent 58%,var(--hl) 58%,var(--hl) 92%,transparent 92%) no-repeat;background-size:100% 100%;padding:0 .08em;animation:swipe .7s cubic-bezier(.2,.7,.2,1) .15s both}
+@keyframes swipe{from{background-size:0 100%}}
+.lede{color:var(--muted);margin:10px 0 0;max-width:34em}
+.title{font-size:30px;font-weight:800;margin:6px 0 18px;letter-spacing:-.01em}
+.sec{font-size:20px;font-weight:600;margin:30px 0 12px}
+.note{color:var(--muted);font-size:15px;margin:14px 0}
+.warn{background:var(--bad-bg);color:var(--bad);padding:12px 14px;border-radius:12px;font-size:15px}
+.err{color:var(--bad);font-size:15px;min-height:1px;margin:8px 0}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:50px;padding:0 20px;border-radius:14px;border:2px solid var(--ink);background:transparent;font-weight:700;cursor:pointer;text-align:center}
+.btn.primary{background:var(--ink);color:var(--paper)}
+.btn.ghost{border-color:var(--line);background:var(--card)}
+.btn.wide{width:100%}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.link{background:none;border:0;padding:4px 0;color:var(--accent);font-weight:700;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+.back{background:none;border:0;padding:8px 0;color:var(--muted);font-weight:700;cursor:pointer}
+.back::before{content:"‹ ";font-size:1.2em}
+.danger-link{background:none;border:0;margin-top:28px;padding:8px 0;color:var(--bad);font-weight:700;cursor:pointer}
+.row{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+.row .btn{flex:1 1 140px}
+
+.packs{display:grid;gap:12px}
+.pack{display:grid;gap:4px;text-align:left;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px 18px;cursor:pointer;width:100%}
+.pack-kind{font-size:14px;color:var(--muted)}
+.pack-name{font-family:"Bricolage Grotesque",system-ui,sans-serif;font-weight:600;font-size:21px;line-height:1.2}
+.pack-meta{font-size:15px;color:var(--muted)}
+.bar{display:block;height:8px;border-radius:8px;background:var(--line);overflow:hidden;margin-top:6px}
+.bar>span{display:block;height:100%;background:var(--hl);border-radius:8px;transition:width .3s}
+.bar.thin{height:5px;margin:8px 0 18px}
+.empty{border:2px dashed var(--line);border-radius:18px;padding:22px;margin-top:22px;color:var(--muted);text-align:center}
+
+.field{display:block;margin:0 0 16px}
+.field>span{display:block;font-weight:700;margin-bottom:6px}
+input[type=text],input:not([type]),textarea,select{width:100%;font:inherit;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+textarea{resize:vertical;min-height:110px}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.seg button{display:grid;gap:2px;text-align:left;padding:12px 14px;border-radius:14px;border:2px solid var(--line);background:var(--card);cursor:pointer;font-weight:700}
+.seg button small{font-weight:400;color:var(--muted);font-size:14px}
+.seg button[aria-checked="true"]{border-color:var(--ink);box-shadow:inset 0 -5px 0 var(--hl)}
+.drop{display:block;border:2px dashed var(--line);border-radius:14px;padding:22px 16px;text-align:center;background:var(--card);cursor:pointer;color:var(--muted);word-break:break-word}
+.drop.has{color:var(--ink);border-style:solid}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+
+.busy{text-align:center;padding:60px 0}
+.spinner{width:46px;height:46px;margin:0 auto 22px;border-radius:50%;border:5px solid var(--line);border-top-color:var(--hl);animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.count{font-family:"Bricolage Grotesque",system-ui,sans-serif;font-size:22px;font-weight:600;margin:14px 0 26px;min-height:1.2em}
+
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:20px}
+.stats div{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px 6px;text-align:center}
+.stats b{display:block;font-family:"Bricolage Grotesque",system-ui,sans-serif;font-size:24px}
+.stats span{font-size:13px;color:var(--muted)}
+.modes{display:grid;gap:10px}
+.mode{display:grid;gap:2px;text-align:left;padding:14px 16px;border-radius:16px;border:1px solid var(--line);background:var(--card);cursor:pointer;width:100%}
+.mode b{font-size:18px}
+.mode span{font-size:15px;color:var(--muted)}
+.mode.primary{border:2px solid var(--ink);box-shadow:inset 6px 0 0 var(--hl)}
+.mode:disabled{opacity:.45;cursor:not-allowed}
+.qlist{margin-top:24px;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:4px 16px}
+.qlist summary{cursor:pointer;font-weight:700;padding:12px 0}
+.qlist ol,.review{padding-left:22px;margin:0 0 12px}
+.qlist li,.review li{margin-bottom:14px}
+.qlist p,.review p{margin:0}
+.ans{color:var(--muted);font-size:15px}
+.ans em{font-style:normal;color:var(--accent)}
+
+.qtop{display:flex;justify-content:space-between;align-items:center;color:var(--muted);font-weight:700}
+.qcard{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:22px 18px}
+.q{font-size:20px;line-height:1.45;margin:0 0 18px;font-weight:700}
+.opts{display:grid;gap:10px}
+.opt{display:flex;gap:12px;align-items:flex-start;text-align:left;width:100%;padding:13px 14px;border-radius:14px;border:2px solid var(--line);background:transparent;cursor:pointer;line-height:1.4}
+.opt .letter{flex:none;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:14px;background:var(--paper);color:var(--muted)}
+.opt:disabled{cursor:default}
+.opt.chosen{border-color:var(--ink)}
+.opt.correct{border-color:var(--ok);background:var(--ok-bg)}
+.opt.correct .txt{color:var(--hl-ink);background:linear-gradient(transparent 6%,var(--hl) 6%,var(--hl) 94%,transparent 94%) no-repeat;background-size:100% 100%;-webkit-box-decoration-break:clone;box-decoration-break:clone;padding:0 .15em;animation:swipe .45s ease-out both}
+.opt.correct .letter{background:var(--ok);color:#fff}
+.opt.wrong{border-color:var(--bad);background:var(--bad-bg)}
+.opt.wrong .letter{background:var(--bad);color:#fff}
+.opt.dim{opacity:.55}
+.fb{margin-top:18px;padding:14px 16px;border-radius:14px}
+.fb.ok{background:var(--ok-bg)}.fb.ok b{color:var(--ok)}
+.fb.bad{background:var(--bad-bg)}.fb.bad b{color:var(--bad)}
+.fb.mid{background:var(--paper)}
+.fb b{font-size:18px}
+.fb p{margin:6px 0 0}
+.model{margin-top:14px;padding:14px 16px;border-left:5px solid var(--hl);background:var(--paper);border-radius:0 12px 12px 0}
+.model b{display:block;margin-bottom:4px}
+.model p{margin:0}
+
+.result{text-align:center;margin:26px 0 10px}
+.big{font-family:"Bricolage Grotesque",system-ui,sans-serif;font-size:84px;font-weight:800;margin:0;line-height:1}
+.big span{font-size:36px;color:var(--muted)}
+.yours{color:var(--bad);font-size:15px}
+.hlt{color:var(--hl-ink);background:var(--hl);padding:0 .15em;-webkit-box-decoration-break:clone;box-decoration-break:clone}
+
+#toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%) translateY(20px);background:var(--ink);color:var(--paper);padding:12px 18px;border-radius:12px;font-size:15px;opacity:0;pointer-events:none;transition:.25s;max-width:calc(100% - 32px);text-align:center;z-index:10}
+#toast.on{opacity:1;transform:translateX(-50%)}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+@media (max-width:420px){.stats b{font-size:21px}.stats span{font-size:12px}}
+
+.toprow{display:flex;justify-content:flex-end;min-height:32px}
+.okmsg{color:var(--ok);font-size:15px;margin:8px 0}
+label.btn{cursor:pointer}
+input[type=password]{width:100%;font:inherit;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.orow{display:flex;gap:10px;align-items:center;margin-bottom:8px}
+.orow input[type=radio]{width:22px;height:22px;flex:none;accent-color:var(--ok);margin:0}
+.orow .link{flex:none;font-size:14px}
+.src{font-size:13px;color:var(--muted)}
+.qlist li .link{font-size:14px}
+.qlist .row2{margin-top:6px}
+.fmt{background:var(--paper);border-radius:12px;padding:12px 14px;font-size:14px;white-space:pre-wrap;margin:8px 0 0;font-family:ui-monospace,Consolas,monospace}
+.hint{font-size:15px;color:var(--muted);margin:0 0 8px}
+.mini{font-size:14px;margin-left:4px;vertical-align:middle;white-space:nowrap}
+</style>
+</head>
+<body>
+<main id="app" aria-live="polite"></main>
+<div id="toast" role="status"></div>
+<script>
+(() => {
+const app = document.getElementById('app');
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+
+/* Modelli usati: "quick" per estrarre i panieri e correggere, "default" per creare domande dalle lezioni */
+const MODELS = { quick: 'claude-haiku-4-5-20251001', default: 'claude-sonnet-5-5' };
+
+let sample = null, apiKey = '', mode = 'memory', installEvt = null;
+const blankAdd = (o = {}) => ({ name: '', kind: 'paniere', reader: 'ai', files: [], text: '', ansFiles: [], ansText: '', n: 20, qtype: 'miste', target: null, err: '', ...o });
+const S = { view: 'loading', packs: [], pid: null, session: null, build: null, add: blankAdd(), ans: null, edit: null,
+  custom: { src: '', n: 20, type: '', check: 'now' }, open: new Set(), keyMsg: '' };
+
+const FORMAT = `1. Qual è la capitale d'Italia?
+A) Milano
+B) Roma
+C) Napoli
+Risposta: B
+
+2. Spiega cos'è un fonema.
+Risposta: È la più piccola unità sonora
+che distingue due parole.`;
+
+/* ---------- utilità ---------- */
+let toastT;
+function toast(msg){ const t = $('#toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('on'), Math.max(3400, msg.length * 60)); }
+function shuffle(a){ for (let i = a.length - 1; i > 0; i--){ const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+const packOf = (id) => S.packs.find(p => p.id === id);
+const srcOf = (p, q) => q.f || p.name;
+const sourcesOf = (p) => [...new Set(p.qs.map(q => srcOf(p, q)))];
+const isPdf = (f) => /pdf$/i.test(f.type) || /\.pdf$/i.test(f.name);
+const okFile = (f) => isPdf(f) || /^text\//.test(f.type) || /\.(txt|md|csv)$/i.test(f.name);
+const baseName = (f) => f.name.replace(/\.(pdf|txt|md|csv)$/i, '');
+const LETTERS = 'ABCDEFGHIJ';
+function errCopy(e){
+  switch (e && e.code){
+    case 'cancelled': return '';
+    case 'bad_key': return 'La chiave API non è valida. Controllala nelle impostazioni.';
+    case 'no_credit': return 'Il credito API è esaurito: ricaricalo su console.anthropic.com.';
+    case 'rate_limited': return 'Troppe richieste in poco tempo. Aspetta un minuto e riprova.';
+    case 'overloaded': return 'Il servizio è sovraccarico in questo momento. Riprova tra poco.';
+    case 'offline': return 'Sei offline: per usare l’IA serve la connessione.';
+    case 'prompt_too_large': return 'Il testo è troppo lungo per una volta sola.';
+    case 'invalid_json': return 'La risposta dell’IA non era leggibile. Riprova.';
+    case 'no_key': return 'Aggiungi la tua chiave API nelle impostazioni.';
+    default: return 'Qualcosa è andato storto con l’IA. Riprova.';
+  }
+}
+const FATAL = ['bad_key', 'no_credit', 'rate_limited', 'offline', 'no_key', 'cancelled'];
+
+/* confronto tra testi: quota di parole in comune */
+const norm = (s) => String(s ?? '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\*\*/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+const words = (s) => new Set(norm(s).split(' ').filter(w => w.length > 2));
+function overlap(A, B){
+  if (!A.size || !B.size) return 0;
+  let i = 0; for (const w of A) if (B.has(w)) i++;
+  return i / Math.min(A.size, B.size);
+}
+
+/* ---------- IA (API Anthropic) ---------- */
+function parseJSON(t){
+  const tryP = (s) => { try { return JSON.parse(s); } catch { return undefined; } };
+  let v = tryP(t.trim()); if (v !== undefined) return v;
+  const f = t.match(/```(?:json)?\s*([\s\S]*?)```/); if (f){ v = tryP(f[1].trim()); if (v !== undefined) return v; }
+  const a = t.search(/[\[{]/), b = Math.max(t.lastIndexOf(']'), t.lastIndexOf('}'));
+  if (a >= 0 && b > a) return tryP(t.slice(a, b + 1));
+  return undefined;
+}
+function makeSample(){
+  async function call(input, opts = {}){
+    if (!apiKey) throw { code: 'no_key' };
+    if (!navigator.onLine) throw { code: 'offline' };
+    const tier = opts.modelTier === 'quick' ? 'quick' : 'default';
+    try {
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST', signal: opts.signal,
+        headers: { 'content-type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+        body: JSON.stringify({ model: MODELS[tier], max_tokens: opts.maxTokens || 2000, messages: [{ role: 'user', content: input }] })
+      });
+      if (!res.ok){
+        let msg = ''; try { msg = ((await res.json()).error || {}).message || ''; } catch {}
+        const code = (res.status === 401 || res.status === 403) ? 'bad_key'
+          : res.status === 429 ? 'rate_limited'
+          : res.status === 529 ? 'overloaded'
+          : res.status === 413 ? 'prompt_too_large'
+          : (res.status === 400 && /credit|billing/i.test(msg)) ? 'no_credit'
+          : 'upstream_error';
+        throw { code, message: msg };
+      }
+      const data = await res.json();
+      const text = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('');
+      if (!text.trim()) throw { code: 'empty_completion' };
+      opts.onText && opts.onText({ text, delta: text });
+      return { text, truncated: data.stop_reason === 'max_tokens' };
+    } catch (e){
+      if (e && e.name === 'AbortError') throw { code: 'cancelled' };
+      if (e && e.code) throw e;
+      throw { code: navigator.onLine ? 'upstream_error' : 'offline' };
+    }
+  }
+  const fn = (input, opts) => call(input, opts);
+  fn.json = async (input, opts = {}) => {
+    const r = await call(input + '\n\nRispondi esclusivamente con JSON valido, senza testo prima o dopo.', opts);
+    const v = parseJSON(r.text);
+    if (v === undefined) throw { code: 'invalid_json', text: r.text };
+    return v;
+  };
+  return fn;
+}
+
+/* ---------- salvataggio (IndexedDB) ---------- */
+const IDB = {
+  db: null,
+  open(){ return new Promise((res, rej) => {
+    const r = indexedDB.open('ripasso', 1);
+    r.onupgradeneeded = () => { r.result.createObjectStore('packs', { keyPath: 'id' }); r.result.createObjectStore('kv'); };
+    r.onsuccess = () => { this.db = r.result; res(); };
+    r.onerror = () => rej(r.error);
+  }); },
+  tx(store, m, fn){ return new Promise((res, rej) => {
+    const t = this.db.transaction(store, m); const req = fn(t.objectStore(store));
+    t.oncomplete = () => res(req && req.result); t.onerror = () => rej(t.error); t.onabort = () => rej(t.error);
+  }); },
+  all(){ return this.tx('packs', 'readonly', s => s.getAll()); },
+  put(p){ return this.tx('packs', 'readwrite', s => s.put(p)); },
+  del(id){ return this.tx('packs', 'readwrite', s => s.delete(id)); },
+  get(k){ return this.tx('kv', 'readonly', s => s.get(k)); },
+  set(k, v){ return this.tx('kv', 'readwrite', s => s.put(v, k)); },
+  rm(k){ return this.tx('kv', 'readwrite', s => s.delete(k)); }
+};
+async function loadAll(){
+  if (mode !== 'idb') return [];
+  const all = await IDB.all();
+  return (all || []).sort((a, b) => (b.created || 0) - (a.created || 0));
+}
+async function savePack(p){
+  if (mode !== 'idb') return;
+  try { await IDB.put(JSON.parse(JSON.stringify(p))); }
+  catch (e){ console.error(e); toast('Salvataggio non riuscito: spazio pieno?'); }
+}
+const saveTimers = {};
+function saveQ(p){ clearTimeout(saveTimers[p.id]); saveTimers[p.id] = setTimeout(() => savePack(p), 400); }
+async function removePack(p){ S.packs = S.packs.filter(x => x.id !== p.id); if (mode === 'idb') await IDB.del(p.id).catch(console.error); }
+async function setKey(k){
+  apiKey = k.trim(); sample = apiKey ? makeSample() : null;
+  if (mode === 'idb'){ try { apiKey ? await IDB.set('apiKey', apiKey) : await IDB.rm('apiKey'); } catch (e){ console.error(e); } }
+}
+
+/* ---------- backup ---------- */
+function exportData(){
+  const blob = new Blob([JSON.stringify({ app: 'ripasso', version: 2, exported: new Date().toISOString(), packs: S.packs }, null, 1)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'ripasso-backup-' + new Date().toISOString().slice(0, 10) + '.json';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+async function importData(file){
+  try {
+    const data = JSON.parse(await file.text());
+    const packs = Array.isArray(data) ? data : data.packs;
+    if (!Array.isArray(packs)) throw 0;
+    let n = 0;
+    for (const p of packs){
+      if (!p || typeof p.id !== 'string' || typeof p.name !== 'string' || !Array.isArray(p.qs)) continue;
+      p.qs = p.qs.filter(q => q && typeof q.q === 'string').map(q => ({ id: q.id || newId(), q: q.q, o: Array.isArray(q.o) ? q.o.map(String) : [], a: Number.isInteger(q.a) ? q.a : null, m: !!q.m, x: q.x || '', r: q.r || '', n: Number.isInteger(q.n) ? q.n : null, f: typeof q.f === 'string' ? q.f : '', s: Object.assign({ c: 0, w: 0, b: 0, t: 0 }, q.s || {}) }));
+      S.packs = S.packs.filter(x => x.id !== p.id); S.packs.unshift(p); await savePack(p); n++;
+    }
+    S.packs.sort((a, b) => (b.created || 0) - (a.created || 0));
+    toast(n ? `Importate ${n} materie` : 'Nel file non ho trovato materie');
+  } catch { toast('Questo file non è un backup di Ripasso'); }
+  render();
+}
+
+/* ---------- lettura file ---------- */
+/* Con bold=true il testo in grassetto viene racchiuso tra ** **: nei panieri spesso segna la risposta giusta. */
+async function pdfText(file, onPage, bold){
+  if (!window.pdfjsLib) throw new Error('nolib');
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  const doc = await pdfjsLib.getDocument({ data: new Uint8Array(await file.arrayBuffer()), disableFontFace: true }).promise;
+  let out = '';
+  for (let i = 1; i <= doc.numPages; i++){
+    const page = await doc.getPage(i);
+    const tc = await page.getTextContent();
+    const isBold = {};
+    if (bold){
+      try {
+        await page.getOperatorList();
+        for (const it of tc.items){
+          if (!it.fontName || it.fontName in isBold) continue;
+          let f = null; try { if (page.commonObjs.has(it.fontName)) f = page.commonObjs.get(it.fontName); } catch {}
+          isBold[it.fontName] = !!(f && (f.bold || f.black || /bold|black|heavy|semibold|demi/i.test(f.name || '')));
+        }
+      } catch (e){ console.warn(e); }
+    }
+    let pg = '', on = false;
+    const close = () => { if (!on) return; let k = pg.length; while (k > 0 && /\s/.test(pg[k - 1])) k--; pg = pg.slice(0, k) + '**' + pg.slice(k); on = false; };
+    for (const it of tc.items){
+      if (typeof it.str !== 'string') continue;
+      if (it.str.trim()){
+        const b = !!isBold[it.fontName];
+        if (b && !on){ pg += '**'; on = true; } else if (!b && on) close();
+      }
+      pg += it.str;
+      if (it.hasEOL){ close(); pg += '\n'; } else pg += ' ';
+    }
+    close();
+    out += pg + '\n';
+    onPage && onPage(i, doc.numPages);
+  }
+  return out;
+}
+const clean = (t) => t.replace(/\*\*([ \t ]*)\*\*/g, '$1').replace(/[ \t ]+/g, ' ').replace(/ *\n */g, '\n').replace(/\n{3,}/g, '\n\n').trim();
+function splitText(t, size, overlap){
+  const out = []; let start = 0;
+  while (start < t.length){
+    let end = Math.min(t.length, start + size);
+    if (end < t.length){ const nl = t.lastIndexOf('\n', end); if (nl > start + size * 0.7) end = nl; }
+    out.push(t.slice(start, end));
+    if (end >= t.length) break;
+    start = Math.max(end - overlap, start + 1);
+  }
+  return out;
+}
+async function gatherText(files, extra, bold){
+  let text = '';
+  for (const file of files){
+    setStatus(`Leggo «${file.name}»…`);
+    if (!isPdf(file)){ text += '\n' + await file.text(); continue; }
+    try { text += '\n' + await pdfText(file, (i, n) => setStatus(`Leggo «${file.name}»: pagina ${i} di ${n}`), bold); }
+    catch (e){ console.error(e); throw new Error(e && e.message === 'nolib' ? 'Il lettore PDF non si è caricato. Apri l’app una volta con la connessione attiva.' : `Non riesco ad aprire «${file.name}». Il file potrebbe essere protetto da password o danneggiato.`); }
+  }
+  if (extra.trim()) text += '\n' + extra;
+  return clean(text);
+}
+
+/* ---------- domande ---------- */
+const unb = (s) => String(s ?? '').replace(/\*\*/g, '').replace(/\s+/g, ' ').trim();
+const toInt = (v) => Number.isInteger(v) ? v : (typeof v === 'string' && /^\s*\d+\s*$/.test(v) ? +v : null);
+function normQ(x, forceMarked){
+  if (!x || typeof x.q !== 'string' || !unb(x.q)) return null;
+  let o = Array.isArray(x.o) ? x.o.map(s => unb(s).replace(/^(?:[A-Fa-f]|\d{1,2})\s*[\)\.\-:]\s+/, '')).filter(Boolean) : [];
+  if (o.length === 1) o = [];
+  const a = Number.isInteger(x.a) && x.a >= 0 && x.a < o.length ? x.a : null;
+  return { id: newId(), q: unb(x.q), o, a, m: forceMarked ? true : !!x.m, x: x.x ? unb(x.x) : '', r: x.r ? String(x.r).replace(/\*\*/g, '').trim() : '', n: toInt(x.n), f: '', s: { c: 0, w: 0, b: 0, t: 0 } };
+}
+const keyOf = (q) => q.q.toLowerCase().replace(/\s+/g, ' ').slice(0, 140) + '|' + (q.o[0] || '').toLowerCase().slice(0, 40);
+const isMC = (q) => q.o.length >= 2;
+const keepOrder = (q) => q.o.some(o => /precedent|sopra|tutte le|nessuna delle|entrambe|tutte e|ambedue/i.test(o));
+
+/* Lettura senza IA: domande numerate, opzioni A) B) C)…, risposta indicata con «Risposta: B»,
+   con un asterisco, con «(corretta)» o in grassetto. */
+const RE_Q = /^(?:\*\*)?\s*(?:domanda\s*(?:n[°.]?\s*)?)?(\d{1,4})\s*[\.\)\-:°]\s*(.*)$/i;
+const RE_O = /^(\*{1,2})?\s*\(?([A-Fa-f])\s*[\)\.\-:]\s+(.*)$/;
+const RE_ANS = /^(?:\*\*)?\s*(?:risposta(?:\s+(?:corretta|esatta|giusta))?|soluzione|corretta|r)\s*[:=\-.]\s*(.*)$/i;
+const RE_MARK = /^\*|\*$|\((?:risposta\s+)?(?:corretta|esatta|giusta)\)|[✓✔✅]/i;
+function localParse(text){
+  const out = []; let cur = null, field = 'q';
+  const push = () => { if (cur && unb(cur.q)) out.push(cur); cur = null; };
+  for (const raw of text.split('\n')){
+    const line = raw.trim(); if (!line) continue;
+    let m;
+    if (cur && (m = line.match(RE_ANS))){ cur.ans = m[1]; field = 'r'; continue; }
+    if (cur && field !== 'r' && (m = line.match(RE_O)) && LETTERS.indexOf(m[2].toUpperCase()) === cur.o.length){
+      cur.o.push(m[3]); cur.mk.push(!!m[1] || RE_MARK.test(m[3].trim())); field = 'o'; continue;
+    }
+    if ((m = line.match(RE_Q)) && m[2].trim()){ push(); cur = { n: +m[1], q: m[2], o: [], mk: [], ans: null }; field = 'q'; continue; }
+    if (!cur) continue;
+    if (field === 'q') cur.q += ' ' + line;
+    else if (field === 'o') cur.o[cur.o.length - 1] += ' ' + line;
+    else cur.ans += '\n' + line;
+  }
+  push();
+  const strip = (s) => unb(s).replace(/\s*\((?:risposta\s+)?(?:corretta|esatta|giusta)\)\s*/i, ' ').replace(/^\*+|\*+$|[✓✔✅]/g, '').trim();
+  let qs = out.map(c => {
+    const o = c.o.map(strip).filter(Boolean);
+    let a = null, r = '';
+    const ans = c.ans != null ? String(c.ans).replace(/\*\*/g, '').trim() : '';
+    if (ans && o.length >= 2){
+      const lm = ans.match(/^\(?([A-Fa-f])(?:$|[\s\)\.:,\-])/);
+      if (lm && LETTERS.indexOf(lm[1].toUpperCase()) < o.length) a = LETTERS.indexOf(lm[1].toUpperCase());
+      else a = bestOption(o, ans);
+      if (a < 0) a = null;
+    } else if (ans) r = ans;
+    if (a === null && o.length >= 2){ const marked = c.mk.map((v, i) => v ? i : -1).filter(i => i >= 0); if (marked.length === 1) a = marked[0]; }
+    return normQ({ q: c.q, o: o.length >= 2 ? o : [], a, m: a !== null, r, n: c.n }, false);
+  }).filter(Boolean);
+  /* in un testo con domande a scelta multipla, le righe numerate senza opzioni né risposta sono rumore */
+  if (qs.filter(isMC).length >= qs.length / 2) qs = qs.filter(q => isMC(q) || q.r);
+  return qs;
+}
+function bestOption(opts, t){
+  const n = norm(t).replace(/^[a-f] /, '');
+  if (!n) return -1;
+  const exact = opts.findIndex(o => norm(o) === n);
+  if (exact >= 0) return exact;
+  const T = words(n); let best = -1, bs = 0, second = 0;
+  opts.forEach((o, i) => { const s = overlap(words(o), T); if (s > bs){ second = bs; bs = s; best = i; } else if (s > second) second = s; });
+  return bs >= 0.6 && bs > second ? best : -1;
+}
+
+/* Griglia di risposte tipo «1-B 2-C 3) A» */
+function parseKey(text){
+  const t = text.replace(/\*\*/g, '');
+  const re = /(?:^|[^\w])(\d{1,4})\s*(?:[\.\)\-:=°]|\s)\s*\(?([A-Fa-f])(?![\wàèéìòù])/g;
+  const items = [], seen = new Set(); let m, covered = 0;
+  while ((m = re.exec(t))){ if (seen.has(m[1])) continue; seen.add(m[1]); items.push({ n: +m[1], l: m[2], q: '', t: '' }); covered += m[0].trim().length; }
+  const body = t.replace(/\s+/g, '').length;
+  return items.length >= 3 && covered >= body * 0.5 ? items : [];
+}
+async function readAnswers(text, targetCount){
+  const key = parseKey(text);
+  if (key.length) return key;
+  const loc = localParse(text).filter(q => q.a !== null || q.r)
+    .map(q => ({ n: q.n, q: q.q, l: q.a !== null ? LETTERS[q.a] : '', t: q.a !== null ? q.o[q.a] : q.r }));
+  if (!sample || loc.length >= targetCount * 0.5) return loc;
+  const parts = splitText(text, 14000, 300), items = [];
+  let next = 0, done = 0, fatal = null;
+  setStatus(parts.length > 1 ? `Leggo le risposte con l’IA: parte 1 di ${parts.length}` : 'Leggo le risposte con l’IA…');
+  const worker = async () => {
+    while (next < parts.length && !S.build.stop && !fatal){
+      const i = next++; const ctl = new AbortController(); S.build.ctls.add(ctl);
+      try {
+        const arr = await sample.json(answersPrompt(parts[i]), { modelTier: 'quick', signal: ctl.signal, maxTokens: 16000 });
+        if (Array.isArray(arr)) for (const x of arr) if (x && typeof x === 'object') items.push({ n: toInt(x.n), q: x.q ? String(x.q) : '', l: x.l ? String(x.l) : '', t: x.t ? String(x.t) : '' });
+      } catch (e){ if (FATAL.includes(e && e.code) && e.code !== 'cancelled') fatal = e; }
+      finally { S.build.ctls.delete(ctl); }
+      done++;
+      if (done < parts.length) setStatus(`Leggo le risposte con l’IA: parte ${Math.min(done + 1, parts.length)} di ${parts.length}`);
+    }
+  };
+  await Promise.all([worker(), worker()]);
+  if (fatal && !items.length) throw fatal;
+  return items.length ? items : loc;
+}
+/* Abbina le risposte alle domande: prima per testo della domanda, poi per numero. */
+function applyAnswers(qs, items){
+  const byN = new Map();
+  for (const q of qs) if (q.n != null){ const k = String(q.n); byN.set(k, byN.has(k) ? null : q); }
+  const W = qs.map(q => words(q.q));
+  const done = new Set(); let hit = 0;
+  for (const it of items){
+    let q = null;
+    if (it.q){
+      const T = words(it.q); let bs = 0;
+      qs.forEach((c, i) => { if (done.has(c)) return; const s = overlap(W[i], T); if (s > bs){ bs = s; q = c; } });
+      if (bs < 0.8) q = null;
+    }
+    if (!q && it.n != null) q = byN.get(String(it.n)) || null;
+    if (!q || done.has(q)) continue;
+    let ok = false;
+    const letter = /^\s*\(?([A-Fa-f])\s*\)?\s*$/.test(it.t || '') ? it.t.trim().replace(/[()]/g, '') : it.l;
+    const text = letter === it.t ? '' : it.t;
+    if (isMC(q)){
+      let idx = text ? bestOption(q.o, text) : -1;
+      if (idx < 0 && letter){ const li = LETTERS.indexOf(String(letter).trim().toUpperCase()[0]); if (li >= 0 && li < q.o.length) idx = li; }
+      if (idx >= 0){ q.a = idx; q.m = true; ok = true; }
+    } else if (text){ q.r = text.replace(/\*\*/g, '').trim(); q.m = true; ok = true; }
+    if (ok){ hit++; done.add(q); }
+  }
+  return hit;
+}
+
+/* ---------- prompt ---------- */
+const BOLD_NOTE = 'Il testo racchiuso tra ** ** era in grassetto nel PDF: nei panieri spesso il grassetto segna la risposta corretta (a volte però sono in grassetto anche le domande). Non riportare gli asterischi nel risultato.';
+function panierePrompt(chunk){
+  return `Sei un assistente che estrae domande da un "paniere" universitario (raccolta di domande d'esame). Ti do un estratto di testo preso da un PDF: può essere disordinato, con numeri di pagina, intestazioni e domande tagliate all'inizio o alla fine.
+
+Estrai OGNI domanda completa presente nell'estratto, senza saltarne nessuna. Ignora solo le domande tagliate a metà all'inizio o alla fine dell'estratto.
+${BOLD_NOTE}
+
+Per ogni domanda restituisci un oggetto:
+{"n": numero della domanda nel paniere se presente, altrimenti null, "q": testo della domanda, "o": [opzioni di risposta, nell'ordine originale, senza lettere o numeri iniziali], "a": indice (da 0) dell'opzione corretta, "m": true se la risposta corretta è segnata nel testo (grassetto, asterisco, "risposta corretta", lettera indicata, simbolo), false se la scegli tu}
+Per le domande aperte (senza opzioni) usa "o": [], "a": null e "r": la risposta riportata nel testo se c'è, altrimenti una risposta modello di 2-4 frasi (in quel caso "m": false).
+Se la risposta corretta non è segnata, sceglila tu con attenzione e metti "m": false.
+Mantieni la lingua e il testo originale delle domande. Non inventare domande che non ci sono.
+Rispondi solo con un array JSON. Se non ci sono domande, rispondi [].
+
+ESTRATTO:
+"""
+${chunk}
+"""`;
+}
+function answersPrompt(chunk){
+  return `Ti do un estratto di un file con le risposte corrette alle domande di un paniere d'esame universitario. Può essere una griglia (es. "1-B 2-C"), un elenco di domande con la soluzione indicata, o domande aperte con la risposta.
+${BOLD_NOTE}
+
+Estrai ogni risposta come oggetto:
+{"n": numero della domanda se presente, altrimenti null, "q": le prime 15 parole della domanda se il testo della domanda è presente, altrimenti null, "l": lettera della risposta corretta se indicata, altrimenti null, "t": testo della risposta corretta se presente (per le domande aperte la risposta completa), altrimenti null}
+Non inventare nulla che non sia nel testo. Rispondi solo con un array JSON. Se non ci sono risposte, rispondi [].
+
+ESTRATTO:
+"""
+${chunk}
+"""`;
+}
+function lessonPrompt(text, n, qtype, avoid){
+  const tipo = qtype === 'multipla' ? 'tutte a scelta multipla' : qtype === 'aperte' ? 'tutte a risposta aperta' : 'circa due terzi a scelta multipla e un terzo a risposta aperta';
+  return `Sei un docente universitario che prepara domande d'esame su una lezione. Ecco il testo della lezione (estratto da PDF: ignora intestazioni, numeri di pagina e indici).
+
+Crea ${n} domande, ${tipo}, che verifichino la comprensione dei concetti importanti e non dettagli banali. Distribuiscile su tutta la lezione.
+${avoid.length ? 'Non ripetere queste domande già fatte:\n- ' + avoid.join('\n- ') + '\n' : ''}
+Formato di ogni oggetto:
+- scelta multipla: {"q": "...", "o": [4 opzioni plausibili e della stessa lunghezza circa], "a": indice dell'opzione corretta da 0, "x": spiegazione di 1-2 frasi}
+- aperta: {"q": "...", "o": [], "a": null, "r": risposta modello di 2-4 frasi}
+Scrivi nella stessa lingua della lezione. Rispondi solo con un array JSON.
+
+LEZIONE:
+"""
+${text}
+"""`;
+}
+
+/* ---------- creazione materiale ---------- */
+function setStatus(t){ if (S.build) S.build.status = t; const el = $('#b-status'); if (el) el.textContent = t; }
+function setCount(n){ if (S.build) S.build.count = n; const el = $('#b-count'); if (el) el.textContent = n ? n + ' domande trovate' : ''; }
+
+async function build(){
+  const f = S.add;
+  syncAdd();
+  if (!f.files.length && !f.text.trim()){ f.err = 'Carica un file o incolla del testo.'; return render(); }
+  if (f.kind === 'lezione' && !sample){ f.err = 'Per creare domande da una lezione serve la chiave API.'; return render(); }
+  f.err = '';
+  const target = f.target ? packOf(f.target) : null;
+  const useAI = f.kind === 'lezione' || (!!sample && f.reader === 'ai');
+  let label = f.files.length ? f.files.map(baseName).join(', ') : (!target && f.name.trim()) || (f.kind === 'paniere' ? 'Testo incollato' : 'Lezione incollata');
+  if (target){ const used = new Set(sourcesOf(target)); const base = label; for (let k = 2; used.has(label); k++) label = `${base} (${k})`; }
+  const name = target ? target.name : (f.name.trim() || label);
+  const hasAns = f.kind === 'paniere' && (f.ansFiles.length || f.ansText.trim());
+  S.build = { kind: f.kind, title: f.kind === 'paniere' ? 'Leggo il paniere' : 'Creo le domande', status: 'Preparo i file…', count: 0, stop: false, ctls: new Set() };
+  S.view = 'build'; render();
+  let text;
+  try { text = await gatherText(f.files, f.text, f.kind === 'paniere'); }
+  catch (e){ return buildFail(e.message); }
+  if (S.build.stop) return buildCancel();
+  if (text.replace(/\*\*/g, '').length < (useAI ? 150 : 20)) return buildFail(f.files.length ? 'Nel file non c’è testo leggibile. Se è una scansione (foto delle pagine) non posso leggerlo: prova con il PDF originale o incolla il testo.' : 'Il testo è troppo corto per farci delle domande.');
+
+  let qs = [], failed = 0, fatal = null;
+  if (f.kind === 'paniere' && !useAI){
+    setStatus('Cerco le domande nel testo…');
+    qs = localParse(text);
+    setCount(qs.length);
+    if (!qs.length) return buildFail(sample
+      ? 'Non ho riconosciuto domande numerate con opzioni A), B), C)… Prova la lettura «Con l’IA».'
+      : 'Non ho riconosciuto domande numerate con opzioni A), B), C)… Controlla il formato nell’esempio, oppure aggiungi la chiave API per leggere PDF disordinati.');
+  } else if (f.kind === 'paniere'){
+    const parts = splitText(text, 14000, 400);
+    const results = new Array(parts.length);
+    const seen = new Set(); let found = 0, next = 0, done = 0;
+    setStatus(parts.length > 1 ? `Estraggo le domande: parte 1 di ${parts.length}` : 'Estraggo le domande…');
+    const worker = async () => {
+      while (next < parts.length && !S.build.stop && !fatal){
+        const i = next++; const ctl = new AbortController(); S.build.ctls.add(ctl);
+        try {
+          const arr = await sample.json(panierePrompt(parts[i]), { modelTier: 'quick', signal: ctl.signal, maxTokens: 16000 });
+          results[i] = (Array.isArray(arr) ? arr : []).map(x => normQ(x, false)).filter(Boolean);
+          for (const q of results[i]){ const k = keyOf(q); if (!seen.has(k)){ seen.add(k); found++; } }
+          setCount(found);
+        } catch (e){
+          if (FATAL.includes(e && e.code)){ if (e.code !== 'cancelled') fatal = e; }
+          else failed++;
+        } finally { S.build.ctls.delete(ctl); }
+        done++;
+        if (!S.build.stop && done < parts.length) setStatus(`Estraggo le domande: parte ${Math.min(done + 1, parts.length)} di ${parts.length}`);
+      }
+    };
+    await Promise.all([worker(), worker()]);
+    const keys = new Set();
+    for (const r of results) for (const q of (r || [])){ const k = keyOf(q); if (!keys.has(k)){ keys.add(k); qs.push(q); } }
+  } else {
+    setStatus(`Preparo ${f.n} domande sulla lezione. Ci vuole circa un minuto.`);
+    try { qs = await genLesson(text.slice(0, 100000), f.n, f.qtype, target ? target.qs : []); }
+    catch (e){ if (e && e.code === 'cancelled') return buildCancel(); fatal = e; }
+  }
+  if (!qs.length){
+    if (S.build.stop) return buildCancel();
+    return buildFail(fatal ? errCopy(fatal) : 'Non ho trovato domande in questo materiale. Se è una lezione, scegli «Lezione» invece di «Paniere».');
+  }
+  qs.forEach(q => { q.f = label; });
+
+  let ansMsg = '';
+  if (hasAns && !S.build.stop){
+    try {
+      const atext = await gatherText(f.ansFiles, f.ansText, true);
+      setStatus('Abbino le risposte alle domande…');
+      const hit = applyAnswers(qs, await readAnswers(atext, qs.length));
+      ansMsg = hit ? `Risposte abbinate a ${hit} domande su ${qs.length}.` : 'Non sono riuscito ad abbinare le risposte alle domande: riprova da «Carica le risposte».';
+    } catch (e){ ansMsg = (e && e.code ? errCopy(e) : (e && e.message)) || 'Non sono riuscito a leggere le risposte.'; }
+  }
+
+  let p = target, added = qs.length;
+  if (p){
+    const keys = new Set(p.qs.map(keyOf));
+    const fresh = qs.filter(q => !keys.has(keyOf(q)));
+    p.qs.push(...fresh); added = fresh.length;
+    if (f.kind === 'lezione'){ p.src = ((p.src || '') + '\n\n' + text).slice(-100000); p.qtype = f.qtype; }
+  } else {
+    p = { id: newId(), name, kind: f.kind, created: Date.now(), qs, src: f.kind === 'lezione' ? text.slice(0, 100000) : '', qtype: f.qtype };
+    S.packs.unshift(p);
+  }
+  await savePack(p);
+  S.add = blankAdd({ kind: f.kind, reader: f.reader, n: f.n, qtype: f.qtype });
+  S.build = null; S.pid = p.id; S.view = 'pack'; render();
+  const msgs = [];
+  if (target) msgs.push(added ? `Aggiunte ${added} domande.` : 'Queste domande c’erano già tutte.');
+  if (ansMsg) msgs.push(ansMsg);
+  if (fatal) msgs.push(errCopy(fatal) + ' Ho tenuto le domande trovate finora.');
+  else if (failed) msgs.push(`${failed} ${failed === 1 ? 'parte non è stata letta' : 'parti non sono state lette'}: alcune domande potrebbero mancare.`);
+  if (msgs.length) toast(msgs.join(' '));
+}
+async function genLesson(src, n, qtype, existing){
+  const ctl = new AbortController(); S.build.ctls.add(ctl);
+  const avoid = existing.slice(-60).map(q => q.q.slice(0, 90));
+  try {
+    const arr = await sample.json(lessonPrompt(src, n, qtype, avoid), { modelTier: 'default', signal: ctl.signal, maxTokens: 12000 });
+    return (Array.isArray(arr) ? arr : []).map(x => normQ(x, true)).filter(Boolean);
+  } finally { S.build.ctls.delete(ctl); }
+}
+function buildFail(msg){ S.build = null; S.add.err = msg; S.view = 'add'; render(); }
+function buildCancel(){ S.build = null; S.view = S.pid && packOf(S.pid) ? 'pack' : 'add'; render(); }
+
+async function moreQuestions(){
+  const p = packOf(S.pid); if (!p) return;
+  S.build = { kind: 'lezione', title: 'Creo altre domande', status: 'Preparo 10 domande nuove sulle lezioni…', count: 0, stop: false, ctls: new Set() };
+  S.view = 'build'; render();
+  try {
+    const qs = await genLesson(p.src, 10, p.qtype || 'miste', p.qs);
+    const keys = new Set(p.qs.map(keyOf));
+    const fresh = qs.filter(q => !keys.has(keyOf(q)));
+    fresh.forEach(q => { q.f = 'Create dalle lezioni'; });
+    p.qs.push(...fresh); await savePack(p);
+    S.build = null; S.view = 'pack'; render();
+    toast(fresh.length ? `Aggiunte ${fresh.length} domande` : 'Non ho trovato domande nuove');
+  } catch (e){ S.build = null; S.view = 'pack'; render(); const m = errCopy(e); if (m) toast(m); }
+}
+
+async function runAnswers(){
+  const p = packOf(S.pid), a = S.ans; if (!p || !a) return;
+  syncAns();
+  if (!a.files.length && !a.text.trim()){ a.err = 'Carica un file o incolla le risposte.'; return render(); }
+  a.err = '';
+  S.build = { kind: 'risposte', title: 'Leggo le risposte', status: 'Preparo i file…', count: 0, stop: false, ctls: new Set() };
+  S.view = 'build'; render();
+  try {
+    const text = await gatherText(a.files, a.text, true);
+    if (S.build.stop) return buildCancel();
+    const qs = a.src ? p.qs.filter(q => srcOf(p, q) === a.src) : p.qs;
+    setStatus('Abbino le risposte alle domande…');
+    const items = await readAnswers(text, qs.length);
+    if (S.build.stop) return buildCancel();
+    const hit = applyAnswers(qs, items);
+    S.build = null;
+    if (!hit){
+      a.err = items.length ? `Ho letto ${items.length} risposte ma non riesco ad abbinarle alle domande. Controlla di aver scelto le domande giuste.`
+        : 'Non ho riconosciuto risposte nel file.' + (sample ? '' : ' Senza chiave API riconosco griglie tipo «1-B 2-C» e domande numerate con «Risposta: B».');
+      S.view = 'answers'; return render();
+    }
+    await savePack(p);
+    S.ans = null; S.view = 'pack'; render();
+    toast(`Risposte inserite per ${hit} domande su ${qs.length}.`);
+  } catch (e){ S.build = null; a.err = (e && e.code ? errCopy(e) : e && e.message) || 'Non sono riuscito a leggere le risposte.'; S.view = 'answers'; render(); }
+}
+
+/* ---------- quiz ---------- */
+function stats(p){
+  let learned = 0, toReview = 0, unseen = 0;
+  for (const q of p.qs){ if (q.s.t === 0) unseen++; else if (q.s.b >= 3) learned++; else if (q.s.w > 0) toReview++; }
+  return { learned, toReview, unseen };
+}
+
+function startQuiz(kind, list){
+  const p = packOf(S.pid); if (!p) return;
+  let idx = list || p.qs.map((_, i) => i);
+  if (!list){
+    if (kind === 'smart'){
+      idx = idx.map(i => { const s = p.qs[i].s; const w = s.t === 0 ? 3 : (5 - Math.min(s.b, 4)) + (s.w > s.c ? 2 : 0); return [i, Math.pow(Math.random(), 1 / w)]; })
+        .sort((a, b) => b[1] - a[1]).slice(0, 20).map(x => x[0]);
+    } else if (kind === 'exam'){
+      idx = shuffle(idx.filter(i => isMC(p.qs[i]) && p.qs[i].a !== null)).slice(0, 30);
+    } else if (kind === 'errors'){
+      idx = shuffle(idx.filter(i => p.qs[i].s.w > 0 && p.qs[i].s.b < 3));
+    }
+  }
+  if (!idx.length) return toast('Non ci sono domande per questa scelta');
+  S.session = { pid: p.id, kind, list: idx, i: 0, res: [] };
+  setupQ(); S.view = 'quiz'; render();
+}
+function setupQ(){
+  const s = S.session, q = packOf(s.pid).qs[s.list[s.i]];
+  Object.assign(s, { phase: 'ask', chosen: null, ok: null, why: '', whyBusy: false, fixing: false, draft: '', verdict: null, prev: null, locked: false });
+  s.order = isMC(q) ? (keepOrder(q) ? q.o.map((_, i) => i) : shuffle(q.o.map((_, i) => i))) : [];
+}
+function applyStat(q, ok){ const s = q.s; if (ok){ s.c++; s.b = Math.min(5, s.b + 1); } else { s.w++; s.b = 0; } s.t = Date.now(); }
+function record(ok, chosen){
+  const s = S.session, p = packOf(s.pid), qi = s.list[s.i], q = p.qs[qi];
+  s.prev = { ...q.s }; s.ok = ok; s.chosen = chosen;
+  if (ok !== null) applyStat(q, ok);
+  s.res.push({ qi, ok, chosen });
+  saveQ(p);
+}
+function nextQ(){
+  const s = S.session; s.i++;
+  if (s.i >= s.list.length){ S.view = 'results'; render(); window.scrollTo(0, 0); return; }
+  setupQ(); render(); window.scrollTo(0, 0);
+}
+
+/* ---------- viste ---------- */
+const back = (act, arg) => `<button class="back" data-act="${act}"${arg ? ` data-arg="${arg}"` : ''}>Indietro</button>`;
+const noKeyNote = () => `<p class="note">Senza chiave API puoi già usare i panieri ordinati (domande numerate con opzioni A), B), C)…) e caricare le risposte. Per i PDF disordinati, le lezioni e la correzione delle risposte aperte <button class="link" data-act="settings">aggiungi la chiave nelle impostazioni</button>.</p>`;
+const fileDrop = (id, files, empty, accept) => `<label class="drop ${files.length ? 'has' : ''}"><input type="file" id="${id}" accept="${accept}" multiple hidden>
+    ${files.length ? files.map(x => esc(x.name)).join('<br>') : empty}</label>`;
+const ACCEPT = 'application/pdf,.pdf,text/plain,.txt,.md,.csv';
+
+function vHome(){
+  const list = S.packs.map(p => {
+    const st = stats(p); const pct = p.qs.length ? Math.round(st.learned / p.qs.length * 100) : 0;
+    const n = sourcesOf(p).length;
+    return `<button class="pack" data-act="open" data-arg="${p.id}">
+      <span class="pack-kind">${n > 1 ? n + ' fonti' : (p.kind === 'lezione' ? 'Lezione' : 'Paniere')}</span>
+      <span class="pack-name">${esc(p.name)}</span>
+      <span class="pack-meta">${p.qs.length} domande, ${pct}% imparate</span>
+      <span class="bar"><span style="width:${pct}%"></span></span></button>`;
+  }).join('');
+  return `<div class="toprow"><button class="link" data-act="settings">Impostazioni</button></div>
+    <header class="hero"><h1><span class="mark">Ripasso</span></h1>
+    <p class="lede">Carica i panieri delle tue materie, anche con il file delle risposte: ti faccio le domande finché non le sai.</p></header>
+    ${!apiKey ? noKeyNote() : ''}
+    <button class="btn primary wide" data-act="add">Nuova materia</button>
+    ${S.packs.length ? `<h2 class="sec">Le tue materie</h2><div class="packs">${list}</div>`
+      : `<div class="empty">Ancora niente qui. Crea la prima materia caricando un paniere o una lezione.</div>`}
+    ${mode === 'memory' ? '<p class="note">Questo browser non permette di salvare: chiudendo l’app i materiali si perdono.</p>' : ''}`;
+}
+
+function vSettings(){
+  const ios = /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.navigator.standalone;
+  const standalone = matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+  return `${back('home')}<h2 class="title">Impostazioni</h2>
+  <h3 class="sec" style="margin-top:0">Chiave API di Anthropic</h3>
+  <p class="note" style="margin-top:0">Facoltativa. Serve per leggere i PDF disordinati, creare domande dalle lezioni e correggere le risposte aperte. La crei su console.anthropic.com. Resta salvata solo su questo dispositivo e viene inviata solo ad Anthropic. L’uso dell’API si paga a parte rispetto all’abbonamento a Claude.</p>
+  <label class="field"><span>Chiave</span><input id="k-key" type="password" autocomplete="off" spellcheck="false" placeholder="sk-ant-…" value="${esc(apiKey)}"></label>
+  ${S.keyMsg ? `<p class="${S.keyMsg.ok ? 'okmsg' : 'err'}">${esc(S.keyMsg.t)}</p>` : ''}
+  <div class="row"><button class="btn primary" data-act="savekey">Salva e prova</button>${apiKey ? '<button class="btn ghost" data-act="delkey">Rimuovi chiave</button>' : ''}</div>
+  <h3 class="sec">Backup</h3>
+  <p class="note" style="margin-top:0">Materie e progressi sono salvati in questo browser. Esporta un backup per non perderli o per spostarli su un altro dispositivo.</p>
+  <div class="row"><button class="btn ghost" data-act="export" ${S.packs.length ? '' : 'disabled'}>Esporta backup</button>
+  <label class="btn ghost" style="flex:1 1 140px">Importa backup<input type="file" id="imp" accept="application/json,.json" hidden></label></div>
+  ${standalone ? '' : `<h3 class="sec">Installa</h3>
+  ${installEvt ? '<div class="row"><button class="btn primary" data-act="install">Installa l’app</button></div>'
+    : ios ? '<p class="note" style="margin-top:0">Su iPhone e iPad: apri questa pagina in Safari, tocca Condividi e poi «Aggiungi alla schermata Home».</p>'
+    : '<p class="note" style="margin-top:0">Dal menu del browser scegli «Installa app» o «Aggiungi a schermata Home».</p>'}`}`;
+}
+
+function vAdd(){
+  const f = S.add, target = f.target ? packOf(f.target) : null;
+  const reader = sample ? f.reader : 'local';
+  return `${target ? back('open', target.id) : back('home')}<h2 class="title">${target ? `Aggiungi a «${esc(target.name)}»` : 'Nuova materia'}</h2>
+  ${target ? '' : `<label class="field"><span>Nome della materia</span><input id="f-name" value="${esc(f.name)}" placeholder="Es. Linguistica generale" autocomplete="off"></label>`}
+  <div class="field"><span>Cosa carichi</span><div class="seg" role="radiogroup">
+    <button role="radio" aria-checked="${f.kind === 'paniere'}" data-act="kind" data-arg="paniere">Paniere<small>Domande già pronte</small></button>
+    <button role="radio" aria-checked="${f.kind === 'lezione'}" data-act="kind" data-arg="lezione">Lezione<small>Le domande le crea l’IA</small></button>
+  </div></div>
+  <div class="field"><span>${f.kind === 'paniere' ? 'Domande' : 'Lezione'}: file PDF o di testo</span>
+    ${fileDrop('f-file', f.files, 'Tocca per scegliere uno o più file', ACCEPT)}
+    ${f.files.length ? '<button class="link" data-act="clearfiles">Rimuovi i file</button>' : ''}</div>
+  <label class="field"><span>Oppure incolla il testo</span><textarea id="f-text" rows="5" placeholder="${f.kind === 'paniere' ? 'Incolla qui le domande' : 'Incolla qui la lezione o gli appunti'}">${esc(f.text)}</textarea></label>
+  ${f.kind === 'paniere' ? `
+  <div class="field"><span>Risposte (facoltativo)</span>
+    <p class="hint">Se le risposte giuste sono in un file a parte, caricalo qui: va bene una griglia («1-B, 2-C…») oppure le domande con la soluzione. Se sono già nel paniere (con «Risposta: B», un asterisco o in grassetto) non serve.</p>
+    ${fileDrop('f-ans', f.ansFiles, 'Tocca per scegliere il file delle risposte', ACCEPT)}
+    ${f.ansFiles.length ? '<button class="link" data-act="clearans">Rimuovi il file delle risposte</button>' : ''}
+    <textarea id="f-anstext" rows="3" placeholder="Oppure incolla qui le risposte" style="margin-top:10px">${esc(f.ansText)}</textarea></div>
+  <div class="field"><span>Come leggerlo</span><div class="seg" role="radiogroup">
+    <button role="radio" aria-checked="${reader === 'ai'}" data-act="reader" data-arg="ai" ${sample ? '' : 'disabled'}>Con l’IA<small>${sample ? 'Per PDF disordinati' : 'Serve la chiave API'}</small></button>
+    <button role="radio" aria-checked="${reader === 'local'}" data-act="reader" data-arg="local">Senza IA<small>Gratis, per testi ordinati</small></button>
+  </div>
+  ${reader === 'local' ? `<details class="note"><summary>Che formato riconosco senza IA</summary><div class="fmt">${esc(FORMAT)}</div>
+    <p>Le opzioni vanno indicate con A), B), C)… La risposta giusta può essere scritta con «Risposta: B», segnata con un asterisco (*B) …) o con «(corretta)», oppure essere in grassetto nel PDF.</p></details>` : ''}</div>`
+  : `<div class="row2">
+    <label class="field"><span>Quante domande</span><select id="f-n">${[10, 20, 30, 40].map(n => `<option value="${n}" ${n == f.n ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
+    <label class="field"><span>Tipo</span><select id="f-type">${[['miste', 'Miste'], ['multipla', 'Scelta multipla'], ['aperte', 'Aperte']].map(([v, l]) => `<option value="${v}" ${v === f.qtype ? 'selected' : ''}>${l}</option>`).join('')}</select></label></div>
+    ${!sample ? '<p class="warn">Per creare domande da una lezione serve la chiave API. <button class="link" data-act="settings">Aggiungila nelle impostazioni</button></p>' : ''}`}
+  ${f.err ? `<p class="err">${esc(f.err)}</p>` : ''}
+  <button class="btn primary wide" data-act="build" ${f.kind === 'lezione' && !sample ? 'disabled' : ''}>${f.kind === 'paniere' ? 'Leggi il paniere' : 'Crea le domande'}</button>
+  <p class="note">${f.kind === 'paniere' ? (reader === 'ai' ? 'Se il paniere non segna le risposte giuste, le sceglie l’IA e te lo indico: potrai correggerle.' : 'Le domande senza risposta potrai completarle dopo, caricando le risposte o a mano.') : 'Funziona meglio con una lezione alla volta.'} I PDF scansionati (foto delle pagine) non hanno testo leggibile.</p>`;
+}
+
+function vAnswers(){
+  const p = packOf(S.pid), a = S.ans; if (!p || !a){ S.view = 'home'; return vHome(); }
+  const srcs = sourcesOf(p);
+  return `${back('open', p.id)}<h2 class="title">Carica le risposte</h2>
+  <p class="note" style="margin-top:0">Va bene una griglia («1-B, 2-C, 3-A…») oppure un file con le domande e la soluzione indicata. Abbino ogni risposta alla sua domanda per testo o per numero.${sample ? '' : ' Senza chiave API riconosco solo questi due formati ordinati.'}</p>
+  ${srcs.length > 1 ? `<label class="field"><span>A quale paniere si riferiscono</span><select id="a-src"><option value="">A tutte le domande della materia</option>${srcs.map(s => `<option value="${esc(s)}" ${s === a.src ? 'selected' : ''}>${esc(s)}</option>`).join('')}</select></label>` : ''}
+  <div class="field"><span>File delle risposte</span>${fileDrop('a-file', a.files, 'Tocca per scegliere un PDF o un file di testo', ACCEPT)}
+    ${a.files.length ? '<button class="link" data-act="clearafiles">Rimuovi i file</button>' : ''}</div>
+  <label class="field"><span>Oppure incolla le risposte</span><textarea id="a-text" rows="5" placeholder="1-B&#10;2-C&#10;3-A">${esc(a.text)}</textarea></label>
+  ${a.err ? `<p class="err">${esc(a.err)}</p>` : ''}
+  <button class="btn primary wide" data-act="ansgo">Abbina le risposte</button>`;
+}
+
+function vEdit(){
+  const p = packOf(S.pid), e = S.edit; if (!p || !e){ S.view = 'home'; return vHome(); }
+  return `${back('open', p.id)}<h2 class="title">${e.qi < 0 ? 'Nuova domanda' : 'Modifica domanda'}</h2>
+  <label class="field"><span>Domanda</span><textarea id="e-q" rows="3">${esc(e.q)}</textarea></label>
+  <div class="field"><span>Opzioni</span>
+    <p class="hint">Seleziona il pallino della risposta giusta. Togli tutte le opzioni per una domanda aperta.</p>
+    ${e.o.map((o, i) => `<div class="orow"><input type="radio" name="e-a" value="${i}" ${e.a === i ? 'checked' : ''} aria-label="Risposta giusta: opzione ${LETTERS[i]}"><input class="e-o" value="${esc(o)}" placeholder="Opzione ${LETTERS[i]}" aria-label="Opzione ${LETTERS[i]}"><button class="link" data-act="eodel" data-arg="${i}">Togli</button></div>`).join('')}
+    ${e.o.length < 8 ? '<button class="link" data-act="eoadd">+ Aggiungi opzione</button>' : ''}</div>
+  <label class="field"><span>Risposta modello${e.o.length ? ' (facoltativa)' : ''}</span><textarea id="e-r" rows="3" placeholder="Per le domande aperte: la risposta da confrontare con la tua">${esc(e.r)}</textarea></label>
+  <label class="field"><span>Spiegazione (facoltativa)</span><textarea id="e-x" rows="2" placeholder="Perché la risposta è quella">${esc(e.x)}</textarea></label>
+  ${e.err ? `<p class="err">${esc(e.err)}</p>` : ''}
+  <button class="btn primary wide" data-act="esave">Salva la domanda</button>
+  ${e.qi >= 0 ? '<button class="danger-link" data-act="edel">Elimina questa domanda</button>' : ''}`;
+}
+
+function vBuild(){
+  const b = S.build;
+  return `<div class="busy"><div class="spinner" aria-hidden="true"></div>
+    <h2 class="title">${esc(b.title)}</h2>
+    <p class="lede" id="b-status" style="margin:0 auto">${esc(b.status)}</p>
+    <p class="count" id="b-count">${b.count ? b.count + ' domande trovate' : ''}</p>
+    <button class="btn ghost" data-act="stopbuild">${b.kind === 'paniere' ? 'Fermati e tieni quelle trovate' : 'Annulla'}</button></div>`;
+}
+
+function vPack(){
+  const p = packOf(S.pid); if (!p){ S.view = 'home'; return vHome(); }
+  const st = stats(p), srcs = sourcesOf(p), c = S.custom;
+  const mcq = p.qs.filter(q => isMC(q) && q.a !== null).length;
+  const est = p.qs.filter(q => isMC(q) && q.a !== null && !q.m).length;
+  const missing = p.qs.filter(q => isMC(q) && q.a === null).length;
+  const sel = (id, opts, cur) => `<select id="${id}">${opts.map(([v, l]) => `<option value="${esc(v)}" ${String(v) === String(cur) ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>`;
+  return `${back('home')}<h2 class="title">${esc(p.name)} <button class="link mini" data-act="rename">Rinomina</button></h2>
+  <div class="stats">
+    <div><b>${p.qs.length}</b><span>domande</span></div><div><b>${st.learned}</b><span>imparate</span></div>
+    <div><b>${st.toReview}</b><span>da ripassare</span></div><div><b>${st.unseen}</b><span>mai viste</span></div></div>
+  <div class="modes">
+    <button class="mode primary" data-act="quiz" data-arg="smart"><b>Ripasso intelligente</b><span>${Math.min(20, p.qs.length)} domande, più spesso quelle che sbagli</span></button>
+    <button class="mode" data-act="quiz" data-arg="exam" ${mcq ? '' : 'disabled'}><b>Simulazione d’esame</b><span>${Math.min(30, mcq)} domande a scelta multipla, correzione alla fine</span></button>
+    <button class="mode" data-act="quiz" data-arg="errors" ${st.toReview ? '' : 'disabled'}><b>Solo errori</b><span>${st.toReview ? st.toReview + ' domande da ripassare' : 'Nessun errore da ripassare'}</span></button>
+    <button class="mode" data-act="quiz" data-arg="all"><b>Tutte in ordine</b><span>Dalla prima all’ultima</span></button>
+  </div>
+  <details class="qlist" data-key="custom" ${S.open.has('custom') ? 'open' : ''}><summary>Quiz su misura</summary>
+    ${srcs.length > 1 ? `<label class="field"><span>Fonte</span>${sel('c-src', [['', 'Tutte le fonti'], ...srcs.map(s => [s, s])], c.src)}</label>` : ''}
+    <div class="row2">
+      <label class="field"><span>Domande</span>${sel('c-n', [[10, '10'], [20, '20'], [30, '30'], [50, '50'], [0, 'Tutte']], c.n)}</label>
+      <label class="field"><span>Tipo</span>${sel('c-type', [['', 'Tutte'], ['mc', 'Scelta multipla'], ['open', 'Aperte']], c.type)}</label></div>
+    <label class="field"><span>Correzione</span>${sel('c-check', [['now', 'Subito, domanda per domanda'], ['end', 'Alla fine, come all’esame (solo scelta multipla)']], c.check)}</label>
+    <button class="btn primary wide" data-act="custom" style="margin-bottom:16px">Inizia il quiz</button></details>
+  ${missing ? `<p class="warn" style="margin-top:18px">${missing} domande non hanno ancora la risposta giusta. <button class="link" data-act="answers">Carica le risposte</button></p>` : ''}
+  ${est ? `<p class="note">${est} risposte non erano segnate nel paniere e le ha scelte l’IA: puoi correggerle durante il quiz, dalla lista delle domande o caricando le risposte.</p>` : ''}
+  <h3 class="sec">Materiale</h3>
+  <div class="row" style="margin-top:0"><button class="btn ghost" data-act="addto">Aggiungi materiale</button><button class="btn ghost" data-act="answers">Carica le risposte</button></div>
+  <div class="row"><button class="btn ghost" data-act="newq">Scrivi una domanda</button>${p.src && sample ? '<button class="btn ghost" data-act="more">Crea altre 10 domande</button>' : ''}</div>
+  ${srcs.length > 1 ? `<p class="note">Fonti: ${srcs.map(esc).join(' · ')}</p>` : ''}
+  <details class="qlist" data-key="list" ${S.open.has('list') ? 'open' : ''}><summary>Vedi e modifica le domande</summary><ol>${p.qs.map((q, i) => `<li><p>${esc(q.q)}</p>${isMC(q)
+      ? `<p class="ans">${q.a !== null ? esc(q.o[q.a]) : 'Risposta non indicata'}${q.a !== null && !q.m ? ' <em>(scelta dall’IA)</em>' : ''}</p>`
+      : (q.r ? `<p class="ans">${esc(q.r)}</p>` : '<p class="ans">Domanda aperta senza risposta modello</p>')}
+      ${srcs.length > 1 ? `<p class="src">${esc(srcOf(p, q))}</p>` : ''}<button class="link" data-act="edit" data-arg="${i}">Modifica</button></li>`).join('')}</ol></details>
+  <button class="danger-link" data-act="del" data-arg="${p.id}">Elimina questa materia</button>`;
+}
+
+function vQuiz(){
+  const s = S.session, p = packOf(s.pid), q = p.qs[s.list[s.i]];
+  const exam = s.kind === 'exam';
+  const top = `<div class="qtop"><button class="link" data-act="quit">Esci</button><span>${s.i + 1} di ${s.list.length}</span></div>
+    <div class="bar thin"><span style="width:${(s.i / s.list.length) * 100}%"></span></div>`;
+  let body = '';
+  if (isMC(q)){
+    const done = s.phase === 'done';
+    body = `<div class="opts">${s.order.map((orig, k) => {
+      let cls = '';
+      if (done && exam) cls = orig === s.chosen ? 'chosen' : '';
+      else if (done && q.a !== null) cls = orig === q.a ? 'correct' : (orig === s.chosen ? 'wrong' : 'dim');
+      else if (done) cls = orig === s.chosen ? 'chosen' : '';
+      const dis = done && !s.fixing ? 'disabled' : '';
+      return `<button class="opt ${cls}" data-act="pick" data-arg="${k}" ${dis}><span class="letter">${LETTERS[k]}</span><span class="txt">${esc(q.o[orig])}</span></button>`;
+    }).join('')}</div>`;
+    if (done && !exam){
+      if (q.a === null){
+        body += `<div class="fb mid"><b>Il paniere non indica la risposta giusta</b>${s.fixing ? '<p>Tocca la risposta giusta per salvarla.</p>' : ''}</div>`;
+        body += `<div class="row">${s.fixing ? '' : '<button class="btn ghost" data-act="fix">Indica la giusta</button>'}<button class="btn primary" data-act="next">Avanti</button></div>`;
+      } else {
+        body += `<div class="fb ${s.ok ? 'ok' : 'bad'}"><b>${s.ok ? 'Giusto' : 'Sbagliato'}</b>
+          ${q.x ? `<p>${esc(q.x)}</p>` : ''}
+          ${s.whyBusy || s.why ? `<p id="why">${esc(s.why || 'Ci penso…')}</p>` : ''}</div>`;
+        if (s.fixing) body += '<p class="note">Tocca la risposta giusta per salvarla.</p>';
+        else if (!q.m) body += `<p class="note">Il paniere non segnava la risposta: l’ha scelta l’IA. <button class="link" data-act="fix">Non è questa? Correggila</button></p>`;
+        body += `<div class="row">${!q.x && sample && !s.why && !s.whyBusy ? '<button class="btn ghost" data-act="why">Perché?</button>' : ''}<button class="btn primary" data-act="next">Avanti</button></div>`;
+      }
+    }
+  } else {
+    if (s.phase === 'ask'){
+      body = `<textarea id="ans" rows="6" placeholder="Scrivi la tua risposta" aria-label="La tua risposta">${esc(s.draft)}</textarea>
+        <div class="row">${sample ? '<button class="btn primary" data-act="grade">Correggi</button>' : ''}<button class="btn ${sample ? 'ghost' : 'primary'}" data-act="reveal">Mostra la risposta</button></div>`;
+    } else if (s.phase === 'grading'){
+      body = `<div class="busy" style="padding:24px 0"><div class="spinner" aria-hidden="true"></div><p class="lede" style="margin:0">Sto correggendo…</p></div>`;
+    } else {
+      const model = q.r ? `<div class="model"><b>Risposta modello</b><p>${esc(q.r)}</p></div>` : '';
+      const yours = s.draft ? `<div class="model" style="border-left-color:var(--line)"><b>La tua risposta</b><p>${esc(s.draft)}</p></div>` : '';
+      if (s.verdict){
+        const v = s.verdict.v;
+        body = `${yours}
+          <div class="fb ${v === 'giusta' ? 'ok' : v === 'parziale' ? 'mid' : 'bad'}"><b>${v === 'giusta' ? 'Giusta' : v === 'parziale' ? 'Parzialmente giusta' : 'Da rivedere'}</b><p>${esc(s.verdict.f)}</p></div>
+          ${model}<div class="row"><button class="btn primary" data-act="next">Avanti</button></div>`;
+      } else if (s.phase === 'revealed'){
+        body = `${yours}${model || '<p class="note">Per questa domanda non c’è una risposta modello.</p>'}
+          <p class="note">Com’è andata?</p>
+          <div class="row"><button class="btn ghost" data-act="self" data-arg="0">Non la sapevo</button><button class="btn primary" data-act="self" data-arg="1">La sapevo</button></div>`;
+      } else {
+        body = `${model}<div class="row"><button class="btn primary" data-act="next">Avanti</button></div>`;
+      }
+    }
+  }
+  return `${top}<article class="qcard"><p class="q">${esc(q.q)}</p>${body}</article>`;
+}
+
+function vResults(){
+  const s = S.session, p = packOf(s.pid);
+  const graded = s.res.filter(r => r.ok !== null);
+  const right = graded.filter(r => r.ok).length;
+  const wrong = s.res.filter(r => r.ok === false);
+  const pct = graded.length ? right / graded.length : 0;
+  const msg = !graded.length ? 'Sessione finita.' : pct >= 0.9 ? 'Ottimo, queste le sai.' : pct >= 0.6 ? 'Buona base: ripassa gli errori qui sotto.' : 'C’è ancora da lavorare: il ripasso intelligente ti riproporrà queste domande.';
+  return `<div class="result"><p class="big">${right}<span>/${graded.length}</span></p><p class="lede" style="margin:12px auto 0">${msg}</p></div>
+  ${wrong.length ? `<h3 class="sec">Da rivedere</h3><ol class="review">${wrong.map(r => { const q = p.qs[r.qi]; return `<li><p><b>${esc(q.q)}</b></p>${isMC(q)
+      ? `${r.chosen != null ? `<p class="yours">La tua: ${esc(q.o[r.chosen])}</p>` : ''}<p class="ans">Giusta: <span class="hlt">${esc(q.o[q.a])}</span></p>`
+      : (q.r ? `<p class="ans">${esc(q.r)}</p>` : '')}</li>`; }).join('')}</ol>` : ''}
+  <div class="row">${wrong.length ? '<button class="btn primary" data-act="redo">Ripassa questi errori</button>' : ''}<button class="btn ghost" data-act="open" data-arg="${p.id}">Torna alla materia</button></div>`;
+}
+
+let lastView = '';
+function render(){
+  let html;
+  switch (S.view){
+    case 'home': html = vHome(); break;
+    case 'settings': html = vSettings(); break;
+    case 'add': html = vAdd(); break;
+    case 'answers': html = vAnswers(); break;
+    case 'edit': html = vEdit(); break;
+    case 'build': html = vBuild(); break;
+    case 'pack': html = vPack(); break;
+    case 'quiz': html = vQuiz(); break;
+    case 'results': html = vResults(); break;
+    default: html = '<div class="busy"><div class="spinner" aria-hidden="true"></div><p class="lede" style="margin:0">Apro i tuoi materiali…</p></div>';
+  }
+  app.innerHTML = html;
+  if (S.view !== lastView){ window.scrollTo(0, 0); lastView = S.view; }
+}
+
+/* ---------- azioni ---------- */
+const H = {
+  home(){ S.view = 'home'; render(); },
+  settings(){ S.keyMsg = ''; S.view = 'settings'; render(); },
+  add(){ const f = S.add; S.add = blankAdd({ kind: f.kind, reader: f.reader, n: f.n, qtype: f.qtype }); S.view = 'add'; render(); },
+  addto(){ const f = S.add; S.add = blankAdd({ kind: f.kind, reader: f.reader, n: f.n, qtype: f.qtype, target: S.pid }); S.view = 'add'; render(); },
+  open(id){ S.pid = id; S.session = null; S.edit = null; S.ans = null; S.view = 'pack'; render(); },
+  kind(k){ syncAdd(); S.add.kind = k; S.add.err = ''; render(); },
+  reader(r){ syncAdd(); S.add.reader = r; render(); },
+  clearfiles(){ syncAdd(); S.add.files = []; render(); },
+  clearans(){ syncAdd(); S.add.ansFiles = []; render(); },
+  build(){ build(); },
+  stopbuild(){ if (!S.build) return; S.build.stop = true; S.build.ctls.forEach(c => c.abort()); setStatus('Mi fermo…'); },
+  more(){ moreQuestions(); },
+  answers(){ S.ans = { files: [], text: '', src: '', err: '' }; S.view = 'answers'; render(); },
+  clearafiles(){ syncAns(); S.ans.files = []; render(); },
+  ansgo(){ runAnswers(); },
+  rename(){
+    const p = packOf(S.pid); if (!p) return;
+    const n = prompt('Nuovo nome della materia', p.name);
+    if (n && n.trim()){ p.name = n.trim(); savePack(p); render(); }
+  },
+  edit(i){
+    const p = packOf(S.pid), k = +i, q = k >= 0 ? p.qs[k] : null;
+    S.edit = { qi: k, q: q ? q.q : '', o: q ? [...q.o] : ['', '', '', ''], a: q ? q.a : null, r: q ? q.r : '', x: q ? q.x : '', err: '' };
+    S.view = 'edit'; render();
+  },
+  newq(){ H.edit('-1'); },
+  eoadd(){ syncEdit(); S.edit.o.push(''); render(); const ins = app.querySelectorAll('.e-o'); ins[ins.length - 1]?.focus(); },
+  eodel(i){ syncEdit(); const e = S.edit, k = +i; e.o.splice(k, 1); if (e.a === k) e.a = null; else if (e.a > k) e.a--; render(); },
+  async esave(){
+    syncEdit();
+    const e = S.edit, p = packOf(S.pid);
+    const q = e.q.trim();
+    if (!q){ e.err = 'Scrivi il testo della domanda.'; return render(); }
+    const pairs = e.o.map((t, i) => [t.trim(), i]).filter(([t]) => t);
+    if (pairs.length === 1){ e.err = 'Servono almeno due opzioni, oppure nessuna per una domanda aperta.'; return render(); }
+    const o = pairs.map(x => x[0]);
+    const ai = pairs.findIndex(x => x[1] === e.a);
+    if (o.length && ai < 0){ e.err = 'Seleziona il pallino della risposta giusta.'; return render(); }
+    const data = { q, o, a: o.length ? ai : null, m: true, r: e.r.trim(), x: e.x.trim() };
+    if (e.qi >= 0) Object.assign(p.qs[e.qi], data);
+    else p.qs.push({ id: newId(), n: null, f: 'Scritte a mano', s: { c: 0, w: 0, b: 0, t: 0 }, ...data });
+    await savePack(p);
+    S.edit = null; S.view = 'pack'; render(); toast('Domanda salvata');
+  },
+  async edel(_, el){
+    if (el.dataset.sure !== '1'){ el.dataset.sure = '1'; el.textContent = 'Tocca di nuovo per eliminare'; setTimeout(() => { if (el.isConnected){ el.dataset.sure = ''; el.textContent = 'Elimina questa domanda'; } }, 4000); return; }
+    const p = packOf(S.pid); p.qs.splice(S.edit.qi, 1); await savePack(p);
+    S.edit = null; S.view = 'pack'; render(); toast('Domanda eliminata');
+  },
+  custom(){
+    syncCustom();
+    const c = S.custom, p = packOf(S.pid);
+    let idx = p.qs.map((_, i) => i).filter(i => {
+      const q = p.qs[i];
+      if (c.src && srcOf(p, q) !== c.src) return false;
+      if (c.type === 'mc' && !isMC(q)) return false;
+      if (c.type === 'open' && isMC(q)) return false;
+      if (c.check === 'end' && !(isMC(q) && q.a !== null)) return false;
+      return true;
+    });
+    shuffle(idx); if (c.n) idx = idx.slice(0, c.n);
+    startQuiz(c.check === 'end' ? 'exam' : 'custom', idx);
+  },
+  async savekey(_, el){
+    const k = ($('#k-key')?.value || '').trim();
+    if (!k){ S.keyMsg = { ok: false, t: 'Incolla la chiave prima di salvare.' }; return render(); }
+    el.disabled = true; el.textContent = 'Provo la chiave…';
+    await setKey(k);
+    try { await sample('Rispondi solo: OK', { modelTier: 'quick', maxTokens: 5 }); S.keyMsg = { ok: true, t: 'Chiave salvata e funzionante.' }; }
+    catch (e){ S.keyMsg = { ok: false, t: 'Chiave salvata, ma la prova non è riuscita. ' + errCopy(e) }; }
+    render();
+  },
+  async delkey(){ await setKey(''); S.keyMsg = { ok: true, t: 'Chiave rimossa da questo dispositivo.' }; render(); },
+  export(){ exportData(); },
+  async install(){ if (!installEvt) return; installEvt.prompt(); try { await installEvt.userChoice; } catch {} installEvt = null; render(); },
+  del(id, el){
+    if (el.dataset.sure !== '1'){ el.dataset.sure = '1'; el.textContent = 'Tocca di nuovo per eliminare'; setTimeout(() => { if (el.isConnected){ el.dataset.sure = ''; el.textContent = 'Elimina questa materia'; } }, 4000); return; }
+    const p = packOf(id); if (p) removePack(p); S.view = 'home'; render(); toast('Materia eliminata');
+  },
+  quiz(kind){ startQuiz(kind); },
+  quit(){ const s = S.session; if (s && s.res.length){ S.view = 'results'; } else { S.view = 'pack'; S.session = null; } render(); },
+  pick(k){
+    const s = S.session, p = packOf(s.pid), qi = s.list[s.i], q = p.qs[qi];
+    const orig = s.order[+k];
+    if (s.fixing){
+      q.a = orig; q.m = true; s.fixing = false;
+      if (s.prev){ q.s = { ...s.prev }; }
+      const ok = s.chosen === orig; s.ok = ok; applyStat(q, ok);
+      const r = s.res[s.res.length - 1]; if (r) r.ok = ok;
+      saveQ(p); render(); toast('Risposta corretta salvata'); return;
+    }
+    if (s.phase !== 'ask' || s.locked) return;
+    const ok = q.a === null ? null : orig === q.a;
+    record(ok, orig); s.phase = 'done';
+    if (s.kind === 'exam'){ s.locked = true; render(); setTimeout(nextQ, 260); }
+    else render();
+  },
+  fix(){ S.session.fixing = true; render(); },
+  next(){ nextQ(); },
+  async why(){
+    const s = S.session, q = packOf(s.pid).qs[s.list[s.i]];
+    s.whyBusy = true; render();
+    const prompt = `Domanda d'esame: ${q.q}\nOpzioni:\n${q.o.map((o, i) => `${LETTERS[i]}) ${o}`).join('\n')}\nRisposta corretta: ${q.o[q.a]}\nRisposta dello studente: ${q.o[s.chosen]}\n\nSpiega in 2-4 frasi semplici, dando del tu allo studente, perché la risposta corretta è giusta${s.ok ? '' : ' e perché la sua scelta non lo è'}. Rispondi nella lingua della domanda, solo con la spiegazione.`;
+    try { const { text } = await sample(prompt, { modelTier: 'quick', maxTokens: 500 }); s.why = text; }
+    catch (e){ s.why = ''; const m = errCopy(e); if (m) toast(m); }
+    s.whyBusy = false; if (S.session === s && S.view === 'quiz') render();
+  },
+  async grade(){
+    const s = S.session, q = packOf(s.pid).qs[s.list[s.i]];
+    const txt = ($('#ans')?.value || '').trim();
+    if (!txt){ toast('Scrivi prima una risposta'); return; }
+    s.draft = txt; s.phase = 'grading'; render();
+    const prompt = `Correggi la risposta di uno studente universitario a una domanda d'esame.\nDomanda: ${q.q}\n${q.r ? 'Risposta modello: ' + q.r + '\n' : ''}Risposta dello studente: ${txt}\n\nValuta il contenuto, non la forma. Rispondi solo con JSON: {"v": "giusta" | "parziale" | "sbagliata", "f": "feedback di 1-3 frasi che dice cosa manca o cosa è sbagliato, dando del tu allo studente, in italiano"}`;
+    try {
+      const r = await sample.json(prompt, { modelTier: 'quick', maxTokens: 600 });
+      const v = ['giusta', 'parziale', 'sbagliata'].includes(r && r.v) ? r.v : 'sbagliata';
+      s.verdict = { v, f: String((r && r.f) || '') };
+      record(v === 'giusta', null); s.phase = 'done';
+    } catch (e){ s.phase = 'ask'; const m = errCopy(e); if (m) toast(m); }
+    if (S.session === s) render();
+  },
+  reveal(){ const s = S.session; s.draft = ($('#ans')?.value || '').trim(); s.phase = 'revealed'; render(); },
+  self(v){ record(v === '1', null); S.session.phase = 'done'; nextQ(); },
+  redo(){ const s = S.session; const idx = [...new Set(s.res.filter(r => r.ok === false).map(r => r.qi))]; startQuiz('errors', shuffle(idx)); }
+};
+function syncAdd(){
+  if (S.view !== 'add') return;
+  const f = S.add;
+  const n = $('#f-name'); if (n) f.name = n.value;
+  const t = $('#f-text'); if (t) f.text = t.value;
+  const at = $('#f-anstext'); if (at) f.ansText = at.value;
+  const c = $('#f-n'); if (c) f.n = +c.value;
+  const y = $('#f-type'); if (y) f.qtype = y.value;
+}
+function syncAns(){
+  const a = S.ans; if (!a || S.view !== 'answers') return;
+  const t = $('#a-text'); if (t) a.text = t.value;
+  const s = $('#a-src'); if (s) a.src = s.value;
+}
+function syncEdit(){
+  const e = S.edit; if (!e || S.view !== 'edit') return;
+  const v = (id) => { const el = $('#' + id); return el ? el.value : ''; };
+  e.q = v('e-q'); e.r = v('e-r'); e.x = v('e-x');
+  e.o = [...app.querySelectorAll('.e-o')].map(x => x.value);
+  const r = app.querySelector('input[name=e-a]:checked'); e.a = r ? +r.value : null;
+}
+function syncCustom(){
+  if (S.view !== 'pack') return;
+  const c = S.custom;
+  const s = $('#c-src'); c.src = s ? s.value : '';
+  const n = $('#c-n'); if (n) c.n = +n.value;
+  const t = $('#c-type'); if (t) c.type = t.value;
+  const k = $('#c-check'); if (k) c.check = k.value;
+}
+function pickFiles(input, current){
+  const all = [...input.files], files = all.filter(okFile);
+  if (files.length < all.length) toast('Ho tenuto solo i file PDF e di testo');
+  return current.concat(files);
+}
+app.addEventListener('click', (e) => {
+  const el = e.target.closest('[data-act]');
+  if (!el || el.disabled) return;
+  const fn = H[el.dataset.act]; if (!fn) return;
+  e.preventDefault(); fn(el.dataset.arg, el);
+});
+app.addEventListener('toggle', (e) => { const k = e.target.dataset && e.target.dataset.key; if (k) e.target.open ? S.open.add(k) : S.open.delete(k); }, true);
+app.addEventListener('input', (e) => {
+  if (S.view === 'add') syncAdd(); else if (S.view === 'answers') syncAns(); else if (S.view === 'edit') syncEdit();
+  if (e.target.id === 'ans' && S.session) S.session.draft = e.target.value;
+});
+app.addEventListener('change', (e) => {
+  const id = e.target.id;
+  if (id === 'f-file'){
+    syncAdd();
+    const before = S.add.files.length;
+    S.add.files = pickFiles(e.target, S.add.files);
+    if (!S.add.name && S.add.files[before]) S.add.name = baseName(S.add.files[before]);
+    S.add.err = ''; render();
+  } else if (id === 'f-ans'){
+    syncAdd(); S.add.ansFiles = pickFiles(e.target, S.add.ansFiles); S.add.err = ''; render();
+  } else if (id === 'a-file'){
+    syncAns(); S.ans.files = pickFiles(e.target, S.ans.files); S.ans.err = ''; render();
+  } else if (id === 'imp'){
+    const f = e.target.files[0]; if (f) importData(f);
+  } else if (S.view === 'add') syncAdd();
+  else if (S.view === 'answers') syncAns();
+  else if (S.view === 'edit') syncEdit();
+  else if (S.view === 'pack') syncCustom();
+});
+window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); installEvt = e; if (S.view === 'settings') render(); });
+window.addEventListener('appinstalled', () => { installEvt = null; toast('App installata'); });
+
+/* ---------- avvio ---------- */
+async function boot(){
+  render();
+  try { await IDB.open(); mode = 'idb'; } catch (e){ console.error(e); mode = 'memory'; }
+  if (mode === 'idb'){
+    try { apiKey = (await IDB.get('apiKey')) || ''; } catch { apiKey = ''; }
+    try { S.packs = await loadAll(); } catch (e){ console.error(e); toast('Non riesco a leggere i materiali salvati'); }
+    if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
+  }
+  for (const p of S.packs) for (const q of p.qs){ if (q.n === undefined) q.n = null; if (q.f === undefined) q.f = ''; }
+  sample = apiKey ? makeSample() : null;
+  S.view = 'home'; render();
+}
+if ('serviceWorker' in navigator && location.protocol.startsWith('http')){
+  window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(console.error));
+}
+boot();
+})();
+
+</script>
+</body>
+</html>
