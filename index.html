@@ -161,6 +161,19 @@ input[type=password]{width:100%;font:inherit;color:var(--ink);background:var(--c
 .pack.year{padding:20px 20px;gap:6px}
 .pack.year .pack-name{font-size:23px;letter-spacing:.01em}
 .tabs{margin:4px 0 0}
+.flip{display:block;width:100%;padding:0;border:0;background:none;perspective:1400px;cursor:pointer;text-align:center;color:inherit;font:inherit}
+.flip:focus-visible{outline:none}
+.flip:focus-visible .face{outline:3px solid var(--accent);outline-offset:2px}
+.flip-in{display:grid;transition:transform .55s cubic-bezier(.2,.7,.2,1);transform-style:preserve-3d}
+.flip.flipped .flip-in{transform:rotateY(180deg)}
+.face{grid-area:1/1;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:14px;min-height:min(56vh,420px);padding:30px 22px;border-radius:24px;background:var(--card);border:1px solid var(--line);-webkit-backface-visibility:hidden;backface-visibility:hidden}
+.face small{font-size:13px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.face em{font-style:normal;font-size:14px;color:var(--muted)}
+.front b{font-family:"Bricolage Grotesque","Atkinson Hyperlegible",system-ui,sans-serif;font-size:clamp(28px,8.5vw,42px);line-height:1.15;letter-spacing:-.01em}
+.rear{transform:rotateY(180deg);border-top:6px solid var(--hl)}
+.rear .def{font-size:19px;line-height:1.55;max-width:30em}
+.recall .btn{min-height:56px}
+.recall .no{border-color:var(--bad);color:var(--bad)}
 .crumb{margin:6px 0 -4px;color:var(--muted);font-weight:700;font-size:15px}
 .gles{font-family:inherit;font-size:15px;color:var(--muted);margin:22px 0 4px}
 .gloss{margin:0}
@@ -782,7 +795,7 @@ function startQuiz(kind, list){
 const itemsOf = (s) => s.items || packOf(s.pid).qs;
 function setupQ(){
   const s = S.session, q = itemsOf(s)[s.list[s.i]];
-  Object.assign(s, { phase: 'ask', chosen: null, ok: null, why: '', whyBusy: false, fixing: false, draft: '', verdict: null, prev: null, locked: false });
+  Object.assign(s, { flipped: false, phase: 'ask', chosen: null, ok: null, why: '', whyBusy: false, fixing: false, draft: '', verdict: null, prev: null, locked: false });
   s.order = isMC(q) ? (keepOrder(q) ? q.o.map((_, i) => i) : shuffle(q.o.map((_, i) => i))) : [];
 }
 function applyStat(q, ok){ const s = q.s; if (ok){ s.c++; s.b = Math.min(5, s.b + 1); } else { s.w++; s.b = 0; } s.t = Date.now(); }
@@ -1026,7 +1039,7 @@ function vGloss(p){
     <div><b>${st.toReview}</b><span>da ripassare</span></div><div><b>${st.unseen}</b><span>mai visti</span></div></div>
   ${lessons.length > 1 ? `<label class="field"><span>Studia</span><select id="g-les"><option value="">Tutte le lezioni</option>${lessons.map(l => `<option value="${esc(l)}" ${l === S.gles ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></label>` : ''}
   <div class="modes">
-    <button class="mode primary" data-act="gquiz" data-arg="cards"><b>Schede</b><span>Vedi il termine, ricorda la definizione e controlla</span></button>
+    <button class="mode primary" data-act="gquiz" data-arg="cards"><b>Flashcard</b><span>Davanti il termine: tocca la carta per girarla e trovare la definizione</span></button>
     <button class="mode" data-act="gquiz" data-arg="mc" ${g.length >= 4 && inLesson.length ? '' : 'disabled'}><b>Quiz sui termini</b><span>Leggi la definizione e scegli il termine giusto</span></button>
     <button class="mode" data-act="gquiz" data-arg="errors" ${errs ? '' : 'disabled'}><b>Solo errori</b><span>${errs ? errs + (errs === 1 ? ' termine' : ' termini') + ' da ripassare' : 'Nessun errore da ripassare'}</span></button>
   </div>
@@ -1042,7 +1055,7 @@ function startGloss(kind){
   let idx = g.map((_, i) => i).filter(i => !S.gles || lessonOf(g[i]) === S.gles);
   if (kind === 'errors') idx = shuffle(idx.filter(i => g[i].s.w > 0 && g[i].s.b < 3));
   else idx = idx.map(i => { const s = g[i].s; const w = s.t === 0 ? 3 : (5 - Math.min(s.b, 4)) + (s.w > s.c ? 2 : 0); return [i, Math.pow(Math.random(), 1 / w)]; })
-    .sort((a, b) => b[1] - a[1]).slice(0, 20).map(x => x[0]);
+    .sort((a, b) => b[1] - a[1]).slice(0, kind === 'cards' ? Infinity : 20).map(x => x[0]);
   if (!idx.length) return toast('Non ci sono termini per questa scelta');
   const items = idx.map(i => {
     const t = g[i];
@@ -1138,6 +1151,14 @@ function vQuiz(){
   const exam = s.kind === 'exam';
   const top = `<div class="qtop"><button class="link" data-act="quit">Esci</button><span>${s.i + 1} di ${s.list.length}</span></div>
     <div class="bar thin"><span style="width:${(s.i / s.list.length) * 100}%"></span></div>`;
+  if (q.card) return `${top}
+    <button class="flip ${s.flipped ? 'flipped' : ''}" data-act="flip" aria-label="Gira la flashcard" aria-pressed="${!!s.flipped}">
+      <span class="flip-in">
+        <span class="face front"><small>Termine</small><b>${esc(q.q)}</b><em>Tocca per girare</em></span>
+        <span class="face rear"><small>Definizione</small><span class="def">${esc(q.r)}</span><em>Tocca per tornare al termine</em></span>
+      </span>
+    </button>
+    <div class="row recall"><button class="btn ghost no" data-act="self" data-arg="0">Non me la ricordo</button><button class="btn primary" data-act="self" data-arg="1">Me la ricordo</button></div>`;
   let body = '';
   if (isMC(q)){
     const done = s.phase === 'done';
@@ -1163,15 +1184,13 @@ function vQuiz(){
       }
     }
   } else {
-    if (s.phase === 'ask' && q.card){
-      body = `<div class="row"><button class="btn primary" data-act="reveal">Mostra la definizione</button></div>`;
-    } else if (s.phase === 'ask'){
+    if (s.phase === 'ask'){
       body = `<textarea id="ans" rows="6" placeholder="Scrivi la tua risposta" aria-label="La tua risposta">${esc(s.draft)}</textarea>
         <div class="row">${sample ? '<button class="btn primary" data-act="grade">Correggi</button>' : ''}<button class="btn ${sample ? 'ghost' : 'primary'}" data-act="reveal">Mostra la risposta</button></div>`;
     } else if (s.phase === 'grading'){
       body = `<div class="busy" style="padding:24px 0"><div class="spinner" aria-hidden="true"></div><p class="lede" style="margin:0">Sto correggendo…</p></div>`;
     } else {
-      const model = q.r ? `<div class="model"><b>${q.card ? 'Definizione' : 'Risposta modello'}</b><p>${esc(q.r)}</p></div>` : '';
+      const model = q.r ? `<div class="model"><b>Risposta modello</b><p>${esc(q.r)}</p></div>` : '';
       const yours = s.draft ? `<div class="model" style="border-left-color:var(--line)"><b>La tua risposta</b><p>${esc(s.draft)}</p></div>` : '';
       if (s.verdict){
         const v = s.verdict.v;
@@ -1360,6 +1379,7 @@ const H = {
     if (s.items){ S.session = { ...s, list: shuffle(idx), i: 0, res: [] }; setupQ(); S.view = 'quiz'; return render(); }
     startQuiz('errors', shuffle(idx));
   },
+  flip(_, el){ const s = S.session; s.flipped = !s.flipped; el.classList.toggle('flipped', s.flipped); el.setAttribute('aria-pressed', String(s.flipped)); },
   part(x){ S.part = x === 'gloss' ? 'gloss' : 'quiz'; render(); },
   gquiz(k){ startGloss(k); },
   gadd(){ S.gadd = { files: [], text: '', l: '', err: '' }; S.view = 'gadd'; render(); },
