@@ -160,6 +160,13 @@ input[type=password]{width:100%;font:inherit;color:var(--ink);background:var(--c
 .hint{font-size:15px;color:var(--muted);margin:0 0 8px}
 .pack.year{padding:20px 20px;gap:6px}
 .pack.year .pack-name{font-size:23px;letter-spacing:.01em}
+.tabs{margin:4px 0 0}
+.gles{font-family:inherit;font-size:15px;color:var(--muted);margin:22px 0 4px}
+.gloss{margin:0}
+.gterm{padding:12px 0;border-bottom:1px solid var(--line)}
+.gterm dt{font-weight:700}
+.gterm dd{margin:2px 0 4px}
+#g-search{margin-bottom:4px}
 .mini{font-size:14px;margin-left:4px;vertical-align:middle;white-space:nowrap}
 </style>
 </head>
@@ -179,7 +186,7 @@ const MODELS = { quick: 'claude-haiku-4-5-20251001', default: 'claude-sonnet-5-5
 let sample = null, apiKey = '', mode = 'memory', installEvt = null;
 const YEARS = ['ESAMI PRIMO ANNO', 'ESAMI SECONDO ANNO', 'ESAMI TERZO ANNO'];
 const blankAdd = (o = {}) => ({ name: '', year: 1, kind: 'paniere', reader: 'ai', files: [], text: '', ansFiles: [], ansText: '', n: 20, qtype: 'miste', target: null, err: '', ...o });
-const S = { view: 'loading', packs: [], year: 1, pid: null, session: null, build: null, add: blankAdd(), ans: null, edit: null,
+const S = { view: 'loading', packs: [], year: 1, pid: null, session: null, build: null, add: blankAdd(), ans: null, edit: null, part: 'quiz', gles: '', gadd: null, gedit: null,
   custom: { src: '', n: 20, type: '', check: 'now' }, open: new Set(), keyMsg: '' };
 
 const FORMAT = `1. Qual è la capitale d'Italia?
@@ -343,6 +350,7 @@ async function importData(file){
       if (!p || typeof p.id !== 'string' || typeof p.name !== 'string' || !Array.isArray(p.qs)) continue;
       p.qs = p.qs.filter(q => q && typeof q.q === 'string').map(q => ({ id: q.id || newId(), q: q.q, o: Array.isArray(q.o) ? q.o.map(String) : [], a: Number.isInteger(q.a) ? q.a : null, m: !!q.m, x: q.x || '', r: q.r || '', n: Number.isInteger(q.n) ? q.n : null, f: typeof q.f === 'string' ? q.f : '', s: Object.assign({ c: 0, w: 0, b: 0, t: 0 }, q.s || {}) }));
       p.year = fixYear(p.year);
+      p.glossary = Array.isArray(p.glossary) ? p.glossary.filter(t => t && typeof t.t === 'string' && typeof t.d === 'string').map(t => ({ id: t.id || newId(), t: t.t, d: t.d, l: typeof t.l === 'string' ? t.l : '', s: Object.assign({ c: 0, w: 0, b: 0, t: 0 }, t.s || {}) })) : [];
       S.packs = S.packs.filter(x => x.id !== p.id); S.packs.unshift(p); await savePack(p); n++;
     }
     S.packs.sort((a, b) => (b.created || 0) - (a.created || 0));
@@ -765,14 +773,15 @@ function startQuiz(kind, list){
   S.session = { pid: p.id, kind, list: idx, i: 0, res: [] };
   setupQ(); S.view = 'quiz'; render();
 }
+const itemsOf = (s) => s.items || packOf(s.pid).qs;
 function setupQ(){
-  const s = S.session, q = packOf(s.pid).qs[s.list[s.i]];
+  const s = S.session, q = itemsOf(s)[s.list[s.i]];
   Object.assign(s, { phase: 'ask', chosen: null, ok: null, why: '', whyBusy: false, fixing: false, draft: '', verdict: null, prev: null, locked: false });
   s.order = isMC(q) ? (keepOrder(q) ? q.o.map((_, i) => i) : shuffle(q.o.map((_, i) => i))) : [];
 }
 function applyStat(q, ok){ const s = q.s; if (ok){ s.c++; s.b = Math.min(5, s.b + 1); } else { s.w++; s.b = 0; } s.t = Date.now(); }
 function record(ok, chosen){
-  const s = S.session, p = packOf(s.pid), qi = s.list[s.i], q = p.qs[qi];
+  const s = S.session, p = packOf(s.pid), qi = s.list[s.i], q = itemsOf(s)[qi];
   s.prev = { ...q.s }; s.ok = ok; s.chosen = chosen;
   if (ok !== null) applyStat(q, ok);
   s.res.push({ qi, ok, chosen });
@@ -814,9 +823,9 @@ function vYear(){
     const st = stats(p); const pct = p.qs.length ? Math.round(st.learned / p.qs.length * 100) : 0;
     const n = sourcesOf(p).length;
     return `<button class="pack" data-act="open" data-arg="${p.id}">
-      <span class="pack-kind">${!p.qs.length ? 'Da caricare' : n > 1 ? n + ' fonti' : (p.kind === 'lezione' ? 'Lezione' : 'Paniere')}</span>
+      <span class="pack-kind">${!p.qs.length ? ((p.glossary || []).length ? 'Glossario' : 'Da caricare') : n > 1 ? n + ' fonti' : (p.kind === 'lezione' ? 'Lezione' : 'Paniere')}</span>
       <span class="pack-name">${esc(p.name)}</span>
-      <span class="pack-meta">${p.qs.length ? `${p.qs.length} ${p.qs.length === 1 ? 'domanda' : 'domande'}, ${pct}% imparate` : 'Nessuna domanda: tocca per caricare il paniere'}</span>
+      <span class="pack-meta">${p.qs.length ? `${p.qs.length} ${p.qs.length === 1 ? 'domanda' : 'domande'}, ${pct}% imparate` : ((p.glossary || []).length ? `${p.glossary.length} termini nel glossario` : 'Nessuna domanda: tocca per caricare il paniere')}</span>
       <span class="bar"><span style="width:${pct}%"></span></span></button>`;
   }).join('');
   return `${back('home')}<h2 class="title">${YEARS[y - 1]}</h2>
@@ -923,15 +932,22 @@ function vPack(){
   const est = p.qs.filter(q => isMC(q) && q.a !== null && !q.m).length;
   const missing = p.qs.filter(q => isMC(q) && q.a === null).length;
   const sel = (id, opts, cur) => `<select id="${id}">${opts.map(([v, l]) => `<option value="${esc(v)}" ${String(v) === String(cur) ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>`;
-  const head = `${back('year', p.year)}<h2 class="title">${esc(p.name)} <button class="link mini" data-act="rename">Rinomina</button></h2>`;
+  const g = p.glossary || [];
+  const head = `${back('year', p.year)}<h2 class="title">${esc(p.name)} <button class="link mini" data-act="rename">Rinomina</button></h2>
+  <div class="seg tabs" role="radiogroup" aria-label="Parte della materia">
+    <button role="radio" aria-checked="${S.part !== 'gloss'}" data-act="part" data-arg="quiz">Paniere<small>${p.qs.length} ${p.qs.length === 1 ? 'domanda' : 'domande'}</small></button>
+    <button role="radio" aria-checked="${S.part === 'gloss'}" data-act="part" data-arg="gloss">Glossario<small>${g.length} ${g.length === 1 ? 'termine' : 'termini'}</small></button>
+  </div>`;
+  const foot = `<label class="field" style="margin-top:24px"><span>Anno della materia</span>${yearSelect('p-year', p.year)}</label>
+  <button class="danger-link" data-act="del" data-arg="${p.id}">Elimina questa materia</button>`;
+  if (S.part === 'gloss') return head + vGloss(p) + foot;
   if (!p.qs.length) return `${head}
-  <div class="empty" style="margin-top:0">Ancora nessuna domanda in questa materia.<br>Carica il paniere per iniziare a ripassare.</div>
+  <div class="empty">Ancora nessuna domanda del paniere.<br>Caricalo per iniziare a ripassare.</div>
   <div class="row"><button class="btn primary" data-act="addto">Carica il paniere</button></div>
   <div class="row"><button class="btn ghost" data-act="newq">Scrivi una domanda</button></div>
-  <label class="field" style="margin-top:24px"><span>Anno della materia</span>${yearSelect('p-year', p.year)}</label>
-  <button class="danger-link" data-act="del" data-arg="${p.id}">Elimina questa materia</button>`;
+  ${foot}`;
   return `${head}
-  <div class="stats">
+  <div class="stats" style="margin-top:18px">
     <div><b>${p.qs.length}</b><span>domande</span></div><div><b>${st.learned}</b><span>imparate</span></div>
     <div><b>${st.toReview}</b><span>da ripassare</span></div><div><b>${st.unseen}</b><span>mai viste</span></div></div>
   <div class="modes">
@@ -957,12 +973,138 @@ function vPack(){
       ? `<p class="ans">${q.a !== null ? esc(q.o[q.a]) : 'Risposta non indicata'}${q.a !== null && !q.m ? ' <em>(scelta dall’IA)</em>' : ''}</p>`
       : (q.r ? `<p class="ans">${esc(q.r)}</p>` : '<p class="ans">Domanda aperta senza risposta modello</p>')}
       ${srcs.length > 1 ? `<p class="src">${esc(srcOf(p, q))}</p>` : ''}<button class="link" data-act="edit" data-arg="${i}">Modifica</button></li>`).join('')}</ol></details>
-  <label class="field" style="margin-top:24px"><span>Anno della materia</span>${yearSelect('p-year', p.year)}</label>
-  <button class="danger-link" data-act="del" data-arg="${p.id}">Elimina questa materia</button>`;
+  ${foot}`;
+}
+
+/* ---------- glossario ---------- */
+const lessonOf = (t) => t.l || 'Altri termini';
+function glossStats(g){
+  let learned = 0, toReview = 0, unseen = 0;
+  for (const t of g){ if (t.s.t === 0) unseen++; else if (t.s.b >= 3) learned++; else if (t.s.w > 0) toReview++; }
+  return { learned, toReview, unseen };
+}
+function vGloss(p){
+  const g = p.glossary || [];
+  const addRow = `<div class="row"><button class="btn ${g.length ? 'ghost' : 'primary'}" data-act="gadd">Aggiungi termini da un PDF</button><button class="btn ghost" data-act="gedit" data-arg="-1">Scrivi un termine</button></div>`;
+  if (!g.length) return `<div class="empty">Il glossario è vuoto.<br>Aggiungi i termini dal PDF di una lezione o scrivili a mano.</div>${addRow}`;
+  const st = glossStats(g), lessons = [...new Set(g.map(lessonOf))];
+  if (S.gles && !lessons.includes(S.gles)) S.gles = '';
+  const inLesson = g.filter(t => !S.gles || lessonOf(t) === S.gles);
+  const errs = inLesson.filter(t => t.s.w > 0 && t.s.b < 3).length;
+  return `<div class="stats" style="margin-top:18px">
+    <div><b>${g.length}</b><span>termini</span></div><div><b>${st.learned}</b><span>imparati</span></div>
+    <div><b>${st.toReview}</b><span>da ripassare</span></div><div><b>${st.unseen}</b><span>mai visti</span></div></div>
+  ${lessons.length > 1 ? `<label class="field"><span>Studia</span><select id="g-les"><option value="">Tutte le lezioni</option>${lessons.map(l => `<option value="${esc(l)}" ${l === S.gles ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></label>` : ''}
+  <div class="modes">
+    <button class="mode primary" data-act="gquiz" data-arg="cards"><b>Schede</b><span>Vedi il termine, ricorda la definizione e controlla</span></button>
+    <button class="mode" data-act="gquiz" data-arg="mc" ${g.length >= 4 && inLesson.length ? '' : 'disabled'}><b>Quiz sui termini</b><span>Leggi la definizione e scegli il termine giusto</span></button>
+    <button class="mode" data-act="gquiz" data-arg="errors" ${errs ? '' : 'disabled'}><b>Solo errori</b><span>${errs ? errs + (errs === 1 ? ' termine' : ' termini') + ' da ripassare' : 'Nessun errore da ripassare'}</span></button>
+  </div>
+  <h3 class="sec">Termini</h3>
+  <input id="g-search" placeholder="Cerca un termine" autocomplete="off" aria-label="Cerca un termine">
+  ${lessons.map(l => `<section class="glesson"><h4 class="gles">${esc(l)}</h4><dl class="gloss">${g.map((t, i) => [t, i]).filter(([t]) => lessonOf(t) === l).sort((a, b) => a[0].t.localeCompare(b[0].t, 'it'))
+      .map(([t, i]) => `<div class="gterm" data-text="${esc((t.t + ' ' + t.d).toLowerCase())}"><dt>${esc(t.t)}</dt><dd>${esc(t.d)}</dd><button class="link" data-act="gedit" data-arg="${i}">Modifica</button></div>`).join('')}</dl></section>`).join('')}
+  <p class="note" id="g-none" hidden>Nessun termine trovato.</p>
+  ${addRow}`;
+}
+function startGloss(kind){
+  const p = packOf(S.pid), g = p.glossary || [];
+  let idx = g.map((_, i) => i).filter(i => !S.gles || lessonOf(g[i]) === S.gles);
+  if (kind === 'errors') idx = shuffle(idx.filter(i => g[i].s.w > 0 && g[i].s.b < 3));
+  else idx = idx.map(i => { const s = g[i].s; const w = s.t === 0 ? 3 : (5 - Math.min(s.b, 4)) + (s.w > s.c ? 2 : 0); return [i, Math.pow(Math.random(), 1 / w)]; })
+    .sort((a, b) => b[1] - a[1]).slice(0, 20).map(x => x[0]);
+  if (!idx.length) return toast('Non ci sono termini per questa scelta');
+  const items = idx.map(i => {
+    const t = g[i];
+    if (kind === 'mc'){
+      const o = shuffle([t.t, ...shuffle(g.filter(x => x !== t && x.t !== t.t).map(x => x.t)).slice(0, 3)]);
+      return { q: t.d, hint: 'Quale termine corrisponde a questa definizione?', o, a: o.indexOf(t.t), m: true, x: '', r: '', s: t.s };
+    }
+    return { q: t.t, o: [], a: null, m: true, x: '', r: t.d, s: t.s, card: true };
+  });
+  S.session = { pid: p.id, kind: 'gloss', items, list: items.map((_, i) => i), i: 0, res: [] };
+  setupQ(); S.view = 'quiz'; render();
+}
+
+/* Riconosce voci «Termine — definizione» (anche con – - o :), una per punto elenco o per riga. */
+function parseGlossary(text){
+  const lines = text.replace(/\*\*/g, '').split('\n').map(l => l.trim());
+  const freq = new Map(); for (const l of lines) if (l) freq.set(l, (freq.get(l) || 0) + 1);
+  const keep = lines.filter(l => l && !(freq.get(l) >= 3 && l.length < 60));   /* intestazioni ripetute a ogni pagina */
+  const BUL = /^[⦿•●▪◦■►▸\-–*]\s*|^\d{1,3}[\.\)]\s+/;
+  const chunks = []; let cur = null;
+  for (const l of keep){
+    const heading = /^[^a-zà-ÿ]*[A-ZÀ-Ý]{3,}[^a-zà-ÿ]*$/.test(l) && l.split(/\s+/).length >= 2;
+    if (BUL.test(l)){ cur = [l.replace(BUL, '')]; chunks.push(cur); }
+    else if (heading){ cur = null; }
+    else if (cur) cur.push(l);
+    else { cur = [l]; chunks.push(cur); }
+  }
+  const tidy = (s) => s.replace(/\s+/g, ' ').replace(/\s+([.,;:!?])/g, '$1').replace(/\b(\w{1,4}) - (\w)/g, '$1-$2').replace(/“\s+/g, '“').replace(/\s+”/g, '”').trim();
+  const out = [];
+  for (const c of chunks){
+    const s = tidy(c.join(' '));
+    const m = s.match(/^(.{1,80}?)\s+[—–-]\s+(.{4,})$/) || s.match(/^([^:]{1,60}):\s+(.{4,})$/);
+    if (!m) continue;
+    const term = m[1].trim(), def = m[2].trim();
+    if (term.split(/\s+/).length > 8 || /[.?!]$/.test(term)) continue;
+    out.push({ t: term, d: def });
+  }
+  return out;
+}
+const newTerm = (t, d, l) => ({ id: newId(), t, d, l, s: { c: 0, w: 0, b: 0, t: 0 } });
+function addTerms(p, terms, lesson){
+  p.glossary = p.glossary || [];
+  const have = new Set(p.glossary.map(x => x.t.trim().toLowerCase()));
+  let n = 0;
+  for (const x of terms){ const k = x.t.trim().toLowerCase(); if (have.has(k)) continue; have.add(k); p.glossary.push(newTerm(x.t, x.d, lesson)); n++; }
+  return n;
+}
+
+function vGlossAdd(){
+  const p = packOf(S.pid), a = S.gadd; if (!p || !a){ S.view = 'home'; return vHome(); }
+  const lessons = [...new Set((p.glossary || []).map(lessonOf))];
+  return `${back('open', p.id)}<h2 class="title">Aggiungi termini</h2>
+  <p class="note" style="margin-top:0">Riconosco i termini scritti come «Termine — definizione», uno per punto elenco o per riga (va bene anche il trattino o i due punti).</p>
+  <div class="field"><span>PDF o file di testo della lezione</span>${fileDrop('g-file', a.files, 'Tocca per scegliere un file', ACCEPT)}
+    ${a.files.length ? '<button class="link" data-act="gclear">Rimuovi i file</button>' : ''}</div>
+  <label class="field"><span>Oppure incolla i termini</span><textarea id="g-text" rows="5" placeholder="Arbitrarietà — Assenza di una relazione naturale tra forma e significato.">${esc(a.text)}</textarea></label>
+  <label class="field"><span>Lezione</span><input id="g-lesson" value="${esc(a.l)}" placeholder="Es. Lezione 9" list="g-lessons" autocomplete="off"><datalist id="g-lessons">${lessons.map(l => `<option value="${esc(l)}">`).join('')}</datalist></label>
+  ${a.err ? `<p class="err">${esc(a.err)}</p>` : ''}
+  <button class="btn primary wide" data-act="gaddgo">Aggiungi al glossario</button>`;
+}
+async function runGlossAdd(){
+  const p = packOf(S.pid), a = S.gadd; syncGAdd();
+  if (!a.files.length && !a.text.trim()){ a.err = 'Carica un file o incolla i termini.'; return render(); }
+  S.build = { kind: 'glossario', title: 'Leggo i termini', status: 'Preparo i file…', count: 0, stop: false, ctls: new Set() };
+  S.view = 'build'; render();
+  try {
+    const text = await gatherText(a.files, a.text, false);
+    const terms = parseGlossary(text);
+    S.build = null;
+    if (!terms.length){ a.err = 'Non ho trovato termini nel formato «Termine — definizione».'; S.view = 'gadd'; return render(); }
+    const lesson = a.l.trim() || (a.files[0] ? baseName(a.files[0]) : 'Altri termini');
+    const n = addTerms(p, terms, lesson);
+    await savePack(p);
+    S.gadd = null; S.part = 'gloss'; S.view = 'pack'; render();
+    toast(n === terms.length ? `Aggiunti ${n} termini al glossario.` : `Aggiunti ${n} termini (${terms.length - n} c’erano già).`);
+  } catch (e){ S.build = null; a.err = (e && e.message) || 'Non sono riuscito a leggere il file.'; S.view = 'gadd'; render(); }
+}
+
+function vGlossEdit(){
+  const p = packOf(S.pid), e = S.gedit; if (!p || !e){ S.view = 'home'; return vHome(); }
+  const lessons = [...new Set((p.glossary || []).map(lessonOf))];
+  return `${back('open', p.id)}<h2 class="title">${e.i < 0 ? 'Nuovo termine' : 'Modifica termine'}</h2>
+  <label class="field"><span>Termine</span><input id="ge-t" value="${esc(e.t)}" autocomplete="off"></label>
+  <label class="field"><span>Definizione</span><textarea id="ge-d" rows="4">${esc(e.d)}</textarea></label>
+  <label class="field"><span>Lezione</span><input id="ge-l" value="${esc(e.l)}" list="ge-lessons" autocomplete="off"><datalist id="ge-lessons">${lessons.map(l => `<option value="${esc(l)}">`).join('')}</datalist></label>
+  ${e.err ? `<p class="err">${esc(e.err)}</p>` : ''}
+  <button class="btn primary wide" data-act="gsave">Salva il termine</button>
+  ${e.i >= 0 ? '<button class="danger-link" data-act="gdel">Elimina questo termine</button>' : ''}`;
 }
 
 function vQuiz(){
-  const s = S.session, p = packOf(s.pid), q = p.qs[s.list[s.i]];
+  const s = S.session, p = packOf(s.pid), q = itemsOf(s)[s.list[s.i]];
   const exam = s.kind === 'exam';
   const top = `<div class="qtop"><button class="link" data-act="quit">Esci</button><span>${s.i + 1} di ${s.list.length}</span></div>
     <div class="bar thin"><span style="width:${(s.i / s.list.length) * 100}%"></span></div>`;
@@ -991,13 +1133,15 @@ function vQuiz(){
       }
     }
   } else {
-    if (s.phase === 'ask'){
+    if (s.phase === 'ask' && q.card){
+      body = `<div class="row"><button class="btn primary" data-act="reveal">Mostra la definizione</button></div>`;
+    } else if (s.phase === 'ask'){
       body = `<textarea id="ans" rows="6" placeholder="Scrivi la tua risposta" aria-label="La tua risposta">${esc(s.draft)}</textarea>
         <div class="row">${sample ? '<button class="btn primary" data-act="grade">Correggi</button>' : ''}<button class="btn ${sample ? 'ghost' : 'primary'}" data-act="reveal">Mostra la risposta</button></div>`;
     } else if (s.phase === 'grading'){
       body = `<div class="busy" style="padding:24px 0"><div class="spinner" aria-hidden="true"></div><p class="lede" style="margin:0">Sto correggendo…</p></div>`;
     } else {
-      const model = q.r ? `<div class="model"><b>Risposta modello</b><p>${esc(q.r)}</p></div>` : '';
+      const model = q.r ? `<div class="model"><b>${q.card ? 'Definizione' : 'Risposta modello'}</b><p>${esc(q.r)}</p></div>` : '';
       const yours = s.draft ? `<div class="model" style="border-left-color:var(--line)"><b>La tua risposta</b><p>${esc(s.draft)}</p></div>` : '';
       if (s.verdict){
         const v = s.verdict.v;
@@ -1013,7 +1157,7 @@ function vQuiz(){
       }
     }
   }
-  return `${top}<article class="qcard"><p class="q">${esc(q.q)}</p>${body}</article>`;
+  return `${top}<article class="qcard">${q.hint ? `<p class="note" style="margin:0 0 8px">${esc(q.hint)}</p>` : ''}<p class="q">${esc(q.q)}</p>${body}</article>`;
 }
 
 function vResults(){
@@ -1022,9 +1166,9 @@ function vResults(){
   const right = graded.filter(r => r.ok).length;
   const wrong = s.res.filter(r => r.ok === false);
   const pct = graded.length ? right / graded.length : 0;
-  const msg = !graded.length ? 'Sessione finita.' : pct >= 0.9 ? 'Ottimo, queste le sai.' : pct >= 0.6 ? 'Buona base: ripassa gli errori qui sotto.' : 'C’è ancora da lavorare: il ripasso intelligente ti riproporrà queste domande.';
+  const msg = !graded.length ? 'Sessione finita.' : pct >= 0.9 ? 'Ottimo, queste le sai.' : pct >= 0.6 ? 'Buona base: ripassa gli errori qui sotto.' : (s.items ? 'C’è ancora da lavorare: ripassa i termini qui sotto.' : 'C’è ancora da lavorare: il ripasso intelligente ti riproporrà queste domande.');
   return `<div class="result"><p class="big">${right}<span>/${graded.length}</span></p><p class="lede" style="margin:12px auto 0">${msg}</p></div>
-  ${wrong.length ? `<h3 class="sec">Da rivedere</h3><ol class="review">${wrong.map(r => { const q = p.qs[r.qi]; return `<li><p><b>${esc(q.q)}</b></p>${isMC(q)
+  ${wrong.length ? `<h3 class="sec">Da rivedere</h3><ol class="review">${wrong.map(r => { const q = itemsOf(s)[r.qi]; return `<li><p><b>${esc(q.q)}</b></p>${isMC(q)
       ? `${r.chosen != null ? `<p class="yours">La tua: ${esc(q.o[r.chosen])}</p>` : ''}<p class="ans">Giusta: <span class="hlt">${esc(q.o[q.a])}</span></p>`
       : (q.r ? `<p class="ans">${esc(q.r)}</p>` : '')}</li>`; }).join('')}</ol>` : ''}
   <div class="row">${wrong.length ? '<button class="btn primary" data-act="redo">Ripassa questi errori</button>' : ''}<button class="btn ghost" data-act="open" data-arg="${p.id}">Torna alla materia</button></div>`;
@@ -1040,6 +1184,8 @@ function render(){
     case 'add': html = vAdd(); break;
     case 'answers': html = vAnswers(); break;
     case 'edit': html = vEdit(); break;
+    case 'gadd': html = vGlossAdd(); break;
+    case 'gedit': html = vGlossEdit(); break;
     case 'build': html = vBuild(); break;
     case 'pack': html = vPack(); break;
     case 'quiz': html = vQuiz(); break;
@@ -1057,7 +1203,10 @@ const H = {
   settings(){ S.keyMsg = ''; S.view = 'settings'; render(); },
   add(){ const f = S.add; S.add = blankAdd({ year: S.year, kind: f.kind, reader: f.reader, n: f.n, qtype: f.qtype }); S.view = 'add'; render(); },
   addto(){ const f = S.add; S.add = blankAdd({ kind: f.kind, reader: f.reader, n: f.n, qtype: f.qtype, target: S.pid }); S.view = 'add'; render(); },
-  open(id){ S.pid = id; S.session = null; S.edit = null; S.ans = null; S.view = 'pack'; render(); },
+  open(id){
+    if (id !== S.pid){ const p = packOf(id); S.part = p && !p.qs.length && (p.glossary || []).length ? 'gloss' : 'quiz'; S.gles = ''; }
+    S.pid = id; S.session = null; S.edit = null; S.ans = null; S.gadd = null; S.gedit = null; S.view = 'pack'; render();
+  },
   kind(k){ syncAdd(); S.add.kind = k; S.add.err = ''; render(); },
   reader(r){ syncAdd(); S.add.reader = r; render(); },
   clearfiles(){ syncAdd(); S.add.files = []; render(); },
@@ -1135,7 +1284,7 @@ const H = {
   quiz(kind){ startQuiz(kind); },
   quit(){ const s = S.session; if (s && s.res.length){ S.view = 'results'; } else { S.view = 'pack'; S.session = null; } render(); },
   pick(k){
-    const s = S.session, p = packOf(s.pid), qi = s.list[s.i], q = p.qs[qi];
+    const s = S.session, p = packOf(s.pid), qi = s.list[s.i], q = itemsOf(s)[qi];
     const orig = s.order[+k];
     if (s.fixing){
       q.a = orig; q.m = true; s.fixing = false;
@@ -1153,7 +1302,7 @@ const H = {
   fix(){ S.session.fixing = true; render(); },
   next(){ nextQ(); },
   async why(){
-    const s = S.session, q = packOf(s.pid).qs[s.list[s.i]];
+    const s = S.session, q = itemsOf(s)[s.list[s.i]];
     s.whyBusy = true; render();
     const prompt = `Domanda d'esame: ${q.q}\nOpzioni:\n${q.o.map((o, i) => `${LETTERS[i]}) ${o}`).join('\n')}\nRisposta corretta: ${q.o[q.a]}\nRisposta dello studente: ${q.o[s.chosen]}\n\nSpiega in 2-4 frasi semplici, dando del tu allo studente, perché la risposta corretta è giusta${s.ok ? '' : ' e perché la sua scelta non lo è'}. Rispondi nella lingua della domanda, solo con la spiegazione.`;
     try { const { text } = await sample(prompt, { modelTier: 'quick', maxTokens: 500 }); s.why = text; }
@@ -1161,7 +1310,7 @@ const H = {
     s.whyBusy = false; if (S.session === s && S.view === 'quiz') render();
   },
   async grade(){
-    const s = S.session, q = packOf(s.pid).qs[s.list[s.i]];
+    const s = S.session, q = itemsOf(s)[s.list[s.i]];
     const txt = ($('#ans')?.value || '').trim();
     if (!txt){ toast('Scrivi prima una risposta'); return; }
     s.draft = txt; s.phase = 'grading'; render();
@@ -1176,7 +1325,36 @@ const H = {
   },
   reveal(){ const s = S.session; s.draft = ($('#ans')?.value || '').trim(); s.phase = 'revealed'; render(); },
   self(v){ record(v === '1', null); S.session.phase = 'done'; nextQ(); },
-  redo(){ const s = S.session; const idx = [...new Set(s.res.filter(r => r.ok === false).map(r => r.qi))]; startQuiz('errors', shuffle(idx)); }
+  redo(){
+    const s = S.session; const idx = [...new Set(s.res.filter(r => r.ok === false).map(r => r.qi))];
+    if (s.items){ S.session = { ...s, list: shuffle(idx), i: 0, res: [] }; setupQ(); S.view = 'quiz'; return render(); }
+    startQuiz('errors', shuffle(idx));
+  },
+  part(x){ S.part = x === 'gloss' ? 'gloss' : 'quiz'; render(); },
+  gquiz(k){ startGloss(k); },
+  gadd(){ S.gadd = { files: [], text: '', l: '', err: '' }; S.view = 'gadd'; render(); },
+  gclear(){ syncGAdd(); S.gadd.files = []; render(); },
+  gaddgo(){ runGlossAdd(); },
+  gedit(i){
+    const p = packOf(S.pid), k = +i, t = k >= 0 ? p.glossary[k] : null;
+    S.gedit = { i: k, t: t ? t.t : '', d: t ? t.d : '', l: t ? (t.l || '') : (S.gles || ''), err: '' };
+    S.view = 'gedit'; render();
+  },
+  async gsave(){
+    syncGEdit();
+    const p = packOf(S.pid), e = S.gedit, t = e.t.trim(), d = e.d.trim();
+    if (!t || !d){ e.err = 'Scrivi sia il termine sia la definizione.'; return render(); }
+    p.glossary = p.glossary || [];
+    if (e.i >= 0) Object.assign(p.glossary[e.i], { t, d, l: e.l.trim() });
+    else p.glossary.push(newTerm(t, d, e.l.trim()));
+    await savePack(p);
+    S.gedit = null; S.part = 'gloss'; S.view = 'pack'; render(); toast('Termine salvato');
+  },
+  async gdel(_, el){
+    if (el.dataset.sure !== '1'){ el.dataset.sure = '1'; el.textContent = 'Tocca di nuovo per eliminare'; setTimeout(() => { if (el.isConnected){ el.dataset.sure = ''; el.textContent = 'Elimina questo termine'; } }, 4000); return; }
+    const p = packOf(S.pid); p.glossary.splice(S.gedit.i, 1); await savePack(p);
+    S.gedit = null; S.part = 'gloss'; S.view = 'pack'; render(); toast('Termine eliminato');
+  }
 };
 function syncAdd(){
   if (S.view !== 'add') return;
@@ -1200,6 +1378,22 @@ function syncEdit(){
   e.o = [...app.querySelectorAll('.e-o')].map(x => x.value);
   const r = app.querySelector('input[name=e-a]:checked'); e.a = r ? +r.value : null;
 }
+function syncGAdd(){
+  const a = S.gadd; if (!a || S.view !== 'gadd') return;
+  const t = $('#g-text'); if (t) a.text = t.value;
+  const l = $('#g-lesson'); if (l) a.l = l.value;
+}
+function syncGEdit(){
+  const e = S.gedit; if (!e || S.view !== 'gedit') return;
+  const v = (id) => { const el = $('#' + id); return el ? el.value : ''; };
+  e.t = v('ge-t'); e.d = v('ge-d'); e.l = v('ge-l');
+}
+function filterGloss(q){
+  q = q.trim().toLowerCase(); let any = false;
+  app.querySelectorAll('.gterm').forEach(el => { const on = !q || el.dataset.text.includes(q); el.hidden = !on; if (on) any = true; });
+  app.querySelectorAll('.glesson').forEach(sec => { sec.hidden = ![...sec.querySelectorAll('.gterm')].some(el => !el.hidden); });
+  const none = $('#g-none'); if (none) none.hidden = any;
+}
 function syncCustom(){
   if (S.view !== 'pack') return;
   const c = S.custom;
@@ -1222,6 +1416,8 @@ app.addEventListener('click', (e) => {
 app.addEventListener('toggle', (e) => { const k = e.target.dataset && e.target.dataset.key; if (k) e.target.open ? S.open.add(k) : S.open.delete(k); }, true);
 app.addEventListener('input', (e) => {
   if (S.view === 'add') syncAdd(); else if (S.view === 'answers') syncAns(); else if (S.view === 'edit') syncEdit();
+  else if (S.view === 'gadd') syncGAdd(); else if (S.view === 'gedit') syncGEdit();
+  if (e.target.id === 'g-search') filterGloss(e.target.value);
   if (e.target.id === 'ans' && S.session) S.session.draft = e.target.value;
 });
 app.addEventListener('change', (e) => {
@@ -1236,6 +1432,12 @@ app.addEventListener('change', (e) => {
     syncAdd(); S.add.ansFiles = pickFiles(e.target, S.add.ansFiles); S.add.err = ''; render();
   } else if (id === 'a-file'){
     syncAns(); S.ans.files = pickFiles(e.target, S.ans.files); S.ans.err = ''; render();
+  } else if (id === 'g-file'){
+    syncGAdd(); const before = S.gadd.files.length; S.gadd.files = pickFiles(e.target, S.gadd.files);
+    if (!S.gadd.l && S.gadd.files[before]) S.gadd.l = baseName(S.gadd.files[before]);
+    S.gadd.err = ''; render();
+  } else if (id === 'g-les'){
+    S.gles = e.target.value; render();
   } else if (id === 'p-year'){
     const p = packOf(S.pid); if (!p) return;
     p.year = S.year = fixYear(e.target.value); savePack(p); render(); toast('Materia spostata in «' + YEARS[p.year - 1] + '»');
@@ -1250,6 +1452,44 @@ window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); inst
 window.addEventListener('appinstalled', () => { installEvt = null; toast('App installata'); });
 
 /* ---------- avvio ---------- */
+/* Termini di glossario da aggiungere una sola volta a una materia (per nome). */
+const GLOSSARY_SEEDS = [{
+  id: 'gloss-ling-l8', pack: 'LINGUISTICA GENERALE', lesson: 'Lezione 8 · Codici di comunicazione e proprietà universali del linguaggio',
+  terms: [
+    ['Ambiguità', 'Proprietà per cui una stessa espressione linguistica può essere interpretata in più modi. Nel corso è considerata non soltanto un limite, ma anche una fonte di flessibilità comunicativa.'],
+    ['Articolatezza', 'Proprietà dei codici i cui segni possono essere scomposti in unità più piccole e ricombinabili.'],
+    ['Codice di comunicazione', 'Sistema organizzato di segni e regole utilizzato per trasmettere informazioni.'],
+    ['Codici della certezza', 'Codici caratterizzati da un numero finito di elementi, assenza di sinonimia e assenza di ambiguità.'],
+    ['Codice diadico', 'Sistema comunicativo nel quale il messaggio realizza direttamente una relazione tra emittente e destinatario senza riferirsi a un oggetto esterno.'],
+    ['Codice triadico', 'Sistema nel quale il messaggio, oltre a mettere in relazione emittente e destinatario, rinvia a un referente esterno.'],
+    ['Creatività linguistica', 'Capacità dei parlanti di produrre e comprendere enunciati nuovi e di modificare il lessico, le regole e i significati.'],
+    ['Numero finito di elementi', 'Proprietà dei codici nei quali l’inventario dei segni può essere contato e memorizzato.'],
+    ['Produttività', 'Capacità del linguaggio di generare continuamente nuove parole e nuove frasi attraverso un insieme finito di regole.'],
+    ['Sinonimia', 'Relazione per cui forme linguistiche diverse possono esprimere significati uguali o molto simili.'],
+    ['Polisemia', 'Proprietà di una stessa forma linguistica di possedere più significati correlati o differenti a seconda del contesto.'],
+    ['Vaghezza', 'Indeterminatezza del significato che permette a un’espressione di assumere interpretazioni diverse in relazione al contesto.'],
+    ['Modularità', 'Concezione del linguaggio come sistema costituito da diversi sottosistemi interconnessi, ciascuno responsabile di una parte dell’elaborazione linguistica.'],
+    ['Costituente', 'Unità linguistica che forma un blocco strutturale all’interno di una frase e che può essere sostituita o spostata come insieme.'],
+    ['Ricorsività', 'Capacità di applicare ripetutamente le stesse regole grammaticali, producendo strutture potenzialmente indefinite.'],
+    ['Discretezza', 'Proprietà per cui il linguaggio organizza continui fisici, come i suoni, in categorie distinte.'],
+    ['Arbitrarietà', 'Assenza di una relazione naturale o necessaria tra forma linguistica e significato. Non significa casualità: ogni lingua possiede regole convenzionali proprie.'],
+    ['Dipendenza dal contesto', 'Proprietà per cui il significato di una parola o di un enunciato può dipendere dalla situazione comunicativa e dal co-testo.'],
+    ['Variabilità linguistica', 'Differenziazione degli usi linguistici in relazione a parlante, gruppo sociale, area geografica, situazione e mezzo comunicativo.'],
+    ['Approccio descrittivo', 'Orientamento della linguistica che descrive il funzionamento effettivo delle lingue senza stabilire preventivamente quali forme siano linguisticamente “corrette” o “scorrette”.'],
+    ['Competenza grammaticale', 'Conoscenza implicita delle regole che permettono di produrre e interpretare strutture linguistiche.'],
+    ['Competenza comunicativa', 'Capacità di utilizzare la competenza grammaticale in modo adeguato allo scopo e al contesto comunicativo.']
+  ]
+}];
+async function seedGlossary(){
+  for (const seed of GLOSSARY_SEEDS){
+    if (mode === 'idb'){ try { if (await IDB.get(seed.id)) continue; } catch {} }
+    const p = S.packs.find(x => x.name.trim().toUpperCase() === seed.pack);
+    if (!p) continue;
+    addTerms(p, seed.terms.map(([t, d]) => ({ t, d })), seed.lesson);
+    await savePack(p);
+    if (mode === 'idb'){ try { await IDB.set(seed.id, true); } catch {} }
+  }
+}
 /* Materie già pronte per ogni anno. Vengono create una sola volta (PRESETS_ID): se ne elimini una, non ricompare.
    Per aggiungerne altre in futuro, aggiungile qui e cambia PRESETS_ID. */
 const PRESETS_ID = 'presets-1';
@@ -1280,6 +1520,7 @@ async function boot(){
   for (const p of S.packs) p.year = fixYear(p.year);
   for (const p of S.packs) for (const q of p.qs){ if (q.n === undefined) q.n = null; if (q.f === undefined) q.f = ''; }
   await seedPresets();
+  await seedGlossary();
   sample = apiKey ? makeSample() : null;
   S.view = 'home'; render();
 }
