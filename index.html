@@ -816,7 +816,7 @@ function vYear(){
       <span class="bar"><span style="width:${pct}%"></span></span></button>`;
   }).join('');
   return `${back('home')}<h2 class="title">${YEARS[y - 1]}</h2>
-    <button class="btn primary wide" data-act="add">Nuova materia</button>
+    ${y === 1 ? '' : '<button class="btn primary wide" data-act="add">Nuova materia</button>'}
     ${packs.length ? `<h3 class="sec">Materie</h3><div class="packs">${list}</div>`
       : `<div class="empty">Ancora nessuna materia qui. Crea la prima caricando un paniere.</div>`}`;
 }
