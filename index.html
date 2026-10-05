@@ -1061,17 +1061,21 @@ function vGloss(p){
   </div>
   <h3 class="sec">Cerca un termine</h3>
   <input id="g-search" type="search" placeholder="Cerca un termine" autocomplete="off" aria-label="Cerca un termine">
-  ${lessons.map(l => `<section class="glesson" hidden><h4 class="gles">${esc(l)}</h4><dl class="gloss">${g.map((t, i) => [t, i]).filter(([t]) => lessonOf(t) === l).sort((a, b) => a[0].t.localeCompare(b[0].t, 'it'))
+  ${lessons.sort((a, b) => lessonNo({ l: a }) - lessonNo({ l: b })).map(l => `<section class="glesson" hidden><h4 class="gles">${esc(l)}</h4><dl class="gloss">${g.map((t, i) => [t, i]).filter(([t]) => lessonOf(t) === l)
       .map(([t, i]) => `<div class="gterm" data-text="${esc(fold(t.t))}" hidden><dt>${esc(t.t)}</dt><dd>${esc(t.d)}</dd></div>`).join('')}</dl></section>`).join('')}
   <p class="note" id="g-none" hidden>Nessun termine trovato.</p>
   `;
 }
+const lessonNo = (t) => { const m = lessonOf(t).match(/lezione\s*(\d+)/i); return m ? +m[1] : Infinity; };
+/* indici dei termini nell'ordine dei PDF (ordinamento stabile: a parità di lezione resta l'ordine di inserimento) */
+const pdfOrder = (g, idx) => [...idx].sort((a, b) => lessonNo(g[a]) - lessonNo(g[b]) || a - b);
 function startGloss(kind){
   const p = packOf(S.pid), g = p.glossary || [];
   let idx = g.map((_, i) => i).filter(i => !S.gles || lessonOf(g[i]) === S.gles);
-  if (kind === 'errors') idx = shuffle(idx.filter(i => g[i].s.w > 0 && g[i].s.b < 3));
+  /* Schede e Solo errori seguono sempre l'ordine dei PDF: lezioni in ordine numerico, termini come compaiono nel PDF. */
+  if (kind === 'cards' || kind === 'errors'){ idx = pdfOrder(g, idx); if (kind === 'errors') idx = idx.filter(i => g[i].s.w > 0 && g[i].s.b < 3); }
   else idx = idx.map(i => { const s = g[i].s; const w = s.t === 0 ? 3 : (5 - Math.min(s.b, 4)) + (s.w > s.c ? 2 : 0); return [i, Math.pow(Math.random(), 1 / w)]; })
-    .sort((a, b) => b[1] - a[1]).slice(0, kind === 'cards' ? Infinity : 20).map(x => x[0]);
+    .sort((a, b) => b[1] - a[1]).slice(0, 20).map(x => x[0]);
   if (!idx.length) return toast('Non ci sono termini per questa scelta');
   const items = idx.map(i => {
     const t = g[i];

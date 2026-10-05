@@ -47,6 +47,6 @@ Materie e progressi sono salvati nel browser del dispositivo. Se cancelli i dati
 
 ## Se modifichi l'app
 
-Dopo aver cambiato `index.html`, apri `sw.js` e aumenta la versione (es. `ripasso-v17` → `ripasso-v18`), altrimenti i telefoni continuano a mostrare la versione vecchia salvata.
+Dopo aver cambiato `index.html`, apri `sw.js` e aumenta la versione (es. `ripasso-v18` → `ripasso-v19`), altrimenti i telefoni continuano a mostrare la versione vecchia salvata.
 
 I modelli usati sono indicati in cima allo script in `index.html` (costante `MODELS`): se Anthropic li ritira, sostituisci i nomi con quelli attuali indicati su https://docs.claude.com.
