@@ -1549,6 +1549,23 @@ const GLOSSARY_SEEDS = [{
     ['Competenza grammaticale', 'Conoscenza implicita delle regole che permettono di produrre e interpretare strutture linguistiche.'],
     ['Competenza comunicativa', 'Capacità di utilizzare la competenza grammaticale in modo adeguato allo scopo e al contesto comunicativo.']
   ]
+}, {
+  id: 'gloss-ling-l16', pack: 'LINGUISTICA GENERALE', unit: 'Lezione 9-16', lesson: 'Lezione 16 · La fonetica',
+  terms: [
+    ['Fonetica', 'Disciplina che studia i suoni del linguaggio dal punto di vista della loro produzione, delle loro caratteristiche fisiche e della loro percezione.'],
+    ['Fonetica articolatoria', 'Studia come gli organi dell’apparato fonatorio producono i suoni.'],
+    ['Fonetica acustica', 'Studia il suono linguistico come fenomeno fisico, analizzandone caratteristiche quali frequenza, intensità e durata.'],
+    ['Fonetica uditiva', 'Studia la percezione e l’elaborazione dei suoni linguistici da parte dell’apparato uditivo e del cervello.'],
+    ['Apparato fonatorio', 'Insieme degli organi coinvolti nella produzione dei suoni del linguaggio.'],
+    ['Tratto vocale', 'Spazio anatomico attraversato dall’aria durante la produzione dei suoni, dalla laringe fino all’esterno.'],
+    ['Articolazione', 'Insieme dei movimenti degli organi fonatori che determinano la configurazione necessaria alla produzione di un suono.'],
+    ['Consonante', 'Suono prodotto con una restrizione o un’ostruzione significativa del flusso d’aria.'],
+    ['Vocale', 'Suono prodotto senza una significativa ostruzione del flusso d’aria.'],
+    ['Modo di articolazione', 'Modalità con cui viene ostacolato il passaggio dell’aria nella produzione di una consonante.'],
+    ['Punto di articolazione', 'Luogo dell’apparato fonatorio nel quale avviene la principale restrizione del flusso d’aria.'],
+    ['Coarticolazione', 'Influenza reciproca che i suoni esercitano tra loro durante il parlato continuo. Il corso sottolinea che i suoni reali non vengono normalmente prodotti come unità completamente isolate.'],
+    ['Trascrizione fonetica', 'Rappresentazione scritta dei suoni effettivamente prodotti nel parlato.']
+  ]
 }];
 /* Materie divise in parti. Il contenuto già presente nella materia passa nella prima parte. */
 const UNIT_SEEDS = [{ id: 'units-ling-1', pack: 'LINGUISTICA GENERALE',
@@ -1643,8 +1660,9 @@ async function seedPretest(){
 async function seedGlossary(){
   for (const seed of GLOSSARY_SEEDS){
     if (mode === 'idb'){ try { if (await IDB.get(seed.id)) continue; } catch {} }
-    const p = S.packs.find(x => x.name.trim().toUpperCase() === seed.pack && !x.parent);
-    if (!p) continue;
+    const top = S.packs.find(x => x.name.trim().toUpperCase() === seed.pack && !x.parent);
+    const p = top && seed.unit ? unitsOf(top).find(x => x.name === seed.unit) : top;
+    if (!p) continue;   /* la parte non esiste ancora: riprova dopo seedUnits() */
     addTerms(p, seed.terms.map(([t, d]) => ({ t, d })), seed.lesson);
     await savePack(p);
     if (mode === 'idb'){ try { await IDB.set(seed.id, true); } catch {} }
@@ -1682,6 +1700,7 @@ async function boot(){
   await seedPresets();
   await seedGlossary();
   await seedUnits();
+  await seedGlossary();
   await seedQuestions();
   await seedPretest();
   sample = apiKey ? makeSample() : null;
