@@ -158,6 +158,8 @@ input[type=password]{width:100%;font:inherit;color:var(--ink);background:var(--c
 .qlist .row2{margin-top:6px}
 .fmt{background:var(--paper);border-radius:12px;padding:12px 14px;font-size:14px;white-space:pre-wrap;margin:8px 0 0;font-family:ui-monospace,Consolas,monospace}
 .hint{font-size:15px;color:var(--muted);margin:0 0 8px}
+.pack.year{padding:20px 20px;gap:6px}
+.pack.year .pack-name{font-size:23px;letter-spacing:.01em}
 .mini{font-size:14px;margin-left:4px;vertical-align:middle;white-space:nowrap}
 </style>
 </head>
@@ -175,8 +177,9 @@ const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2
 const MODELS = { quick: 'claude-haiku-4-5-20251001', default: 'claude-sonnet-5-5' };
 
 let sample = null, apiKey = '', mode = 'memory', installEvt = null;
-const blankAdd = (o = {}) => ({ name: '', kind: 'paniere', reader: 'ai', files: [], text: '', ansFiles: [], ansText: '', n: 20, qtype: 'miste', target: null, err: '', ...o });
-const S = { view: 'loading', packs: [], pid: null, session: null, build: null, add: blankAdd(), ans: null, edit: null,
+const YEARS = ['ESAMI PRIMO ANNO', 'ESAMI SECONDO ANNO', 'ESAMI TERZO ANNO'];
+const blankAdd = (o = {}) => ({ name: '', year: 1, kind: 'paniere', reader: 'ai', files: [], text: '', ansFiles: [], ansText: '', n: 20, qtype: 'miste', target: null, err: '', ...o });
+const S = { view: 'loading', packs: [], year: 1, pid: null, session: null, build: null, add: blankAdd(), ans: null, edit: null,
   custom: { src: '', n: 20, type: '', check: 'now' }, open: new Set(), keyMsg: '' };
 
 const FORMAT = `1. Qual è la capitale d'Italia?
@@ -194,6 +197,9 @@ let toastT;
 function toast(msg){ const t = $('#toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('on'), Math.max(3400, msg.length * 60)); }
 function shuffle(a){ for (let i = a.length - 1; i > 0; i--){ const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
 const packOf = (id) => S.packs.find(p => p.id === id);
+const packsOfYear = (y) => S.packs.filter(p => p.year === y);
+const yearSelect = (id, cur) => `<select id="${id}">${YEARS.map((l, i) => `<option value="${i + 1}" ${i + 1 === cur ? 'selected' : ''}>${l}</option>`).join('')}</select>`;
+const fixYear = (y) => [1, 2, 3].includes(+y) ? +y : 1;
 const srcOf = (p, q) => q.f || p.name;
 const sourcesOf = (p) => [...new Set(p.qs.map(q => srcOf(p, q)))];
 const isPdf = (f) => /pdf$/i.test(f.type) || /\.pdf$/i.test(f.name);
@@ -332,6 +338,7 @@ async function importData(file){
     for (const p of packs){
       if (!p || typeof p.id !== 'string' || typeof p.name !== 'string' || !Array.isArray(p.qs)) continue;
       p.qs = p.qs.filter(q => q && typeof q.q === 'string').map(q => ({ id: q.id || newId(), q: q.q, o: Array.isArray(q.o) ? q.o.map(String) : [], a: Number.isInteger(q.a) ? q.a : null, m: !!q.m, x: q.x || '', r: q.r || '', n: Number.isInteger(q.n) ? q.n : null, f: typeof q.f === 'string' ? q.f : '', s: Object.assign({ c: 0, w: 0, b: 0, t: 0 }, q.s || {}) }));
+      p.year = fixYear(p.year);
       S.packs = S.packs.filter(x => x.id !== p.id); S.packs.unshift(p); await savePack(p); n++;
     }
     S.packs.sort((a, b) => (b.created || 0) - (a.created || 0));
@@ -663,11 +670,12 @@ async function build(){
     p.qs.push(...fresh); added = fresh.length;
     if (f.kind === 'lezione'){ p.src = ((p.src || '') + '\n\n' + text).slice(-100000); p.qtype = f.qtype; }
   } else {
-    p = { id: newId(), name, kind: f.kind, created: Date.now(), qs, src: f.kind === 'lezione' ? text.slice(0, 100000) : '', qtype: f.qtype };
+    p = { id: newId(), name, year: f.year, kind: f.kind, created: Date.now(), qs, src: f.kind === 'lezione' ? text.slice(0, 100000) : '', qtype: f.qtype };
     S.packs.unshift(p);
   }
   await savePack(p);
   S.add = blankAdd({ kind: f.kind, reader: f.reader, n: f.n, qtype: f.qtype });
+  S.year = p.year;
   S.build = null; S.pid = p.id; S.view = 'pack'; render();
   const msgs = [];
   if (target) msgs.push(added ? `Aggiunte ${added} domande.` : 'Queste domande c’erano già tutte.');
@@ -774,13 +782,31 @@ function nextQ(){
 
 /* ---------- viste ---------- */
 const back = (act, arg) => `<button class="back" data-act="${act}"${arg ? ` data-arg="${arg}"` : ''}>Indietro</button>`;
-const noKeyNote = () => `<p class="note">Senza chiave API puoi già usare i panieri ordinati (domande numerate con opzioni A), B), C)…) e caricare le risposte. Per i PDF disordinati, le lezioni e la correzione delle risposte aperte <button class="link" data-act="settings">aggiungi la chiave nelle impostazioni</button>.</p>`;
 const fileDrop = (id, files, empty, accept) => `<label class="drop ${files.length ? 'has' : ''}"><input type="file" id="${id}" accept="${accept}" multiple hidden>
     ${files.length ? files.map(x => esc(x.name)).join('<br>') : empty}</label>`;
 const ACCEPT = 'application/pdf,.pdf,text/plain,.txt,.md,.csv';
 
 function vHome(){
-  const list = S.packs.map(p => {
+  const cards = YEARS.map((label, i) => {
+    const y = i + 1, packs = packsOfYear(y);
+    const total = packs.reduce((n, p) => n + p.qs.length, 0);
+    const learned = packs.reduce((n, p) => n + stats(p).learned, 0);
+    const pct = total ? Math.round(learned / total * 100) : 0;
+    return `<button class="pack year" data-act="year" data-arg="${y}">
+      <span class="pack-name">${label}</span>
+      <span class="pack-meta">${packs.length ? `${packs.length} ${packs.length === 1 ? 'materia' : 'materie'}, ${total} ${total === 1 ? 'domanda' : 'domande'}, ${pct}% imparate` : 'Nessuna materia'}</span>
+      <span class="bar"><span style="width:${pct}%"></span></span></button>`;
+  }).join('');
+  return `<div class="toprow"><button class="link" data-act="settings">Impostazioni</button></div>
+    <header class="hero"><h1><span class="mark">Ripasso</span></h1>
+    <p class="lede">Carica i panieri delle tue materie, anche con il file delle risposte: ti faccio le domande finché non le sai.</p></header>
+    <div class="packs">${cards}</div>
+    ${mode === 'memory' ? '<p class="note">Questo browser non permette di salvare: chiudendo l’app i materiali si perdono.</p>' : ''}`;
+}
+
+function vYear(){
+  const y = S.year, packs = packsOfYear(y);
+  const list = packs.map(p => {
     const st = stats(p); const pct = p.qs.length ? Math.round(st.learned / p.qs.length * 100) : 0;
     const n = sourcesOf(p).length;
     return `<button class="pack" data-act="open" data-arg="${p.id}">
@@ -789,14 +815,10 @@ function vHome(){
       <span class="pack-meta">${p.qs.length} domande, ${pct}% imparate</span>
       <span class="bar"><span style="width:${pct}%"></span></span></button>`;
   }).join('');
-  return `<div class="toprow"><button class="link" data-act="settings">Impostazioni</button></div>
-    <header class="hero"><h1><span class="mark">Ripasso</span></h1>
-    <p class="lede">Carica i panieri delle tue materie, anche con il file delle risposte: ti faccio le domande finché non le sai.</p></header>
-    ${!apiKey ? noKeyNote() : ''}
+  return `${back('home')}<h2 class="title">${YEARS[y - 1]}</h2>
     <button class="btn primary wide" data-act="add">Nuova materia</button>
-    ${S.packs.length ? `<h2 class="sec">Le tue materie</h2><div class="packs">${list}</div>`
-      : `<div class="empty">Ancora niente qui. Crea la prima materia caricando un paniere o una lezione.</div>`}
-    ${mode === 'memory' ? '<p class="note">Questo browser non permette di salvare: chiudendo l’app i materiali si perdono.</p>' : ''}`;
+    ${packs.length ? `<h3 class="sec">Materie</h3><div class="packs">${list}</div>`
+      : `<div class="empty">Ancora nessuna materia qui. Crea la prima caricando un paniere.</div>`}`;
 }
 
 function vSettings(){
@@ -821,8 +843,9 @@ function vSettings(){
 function vAdd(){
   const f = S.add, target = f.target ? packOf(f.target) : null;
   const reader = sample ? f.reader : 'local';
-  return `${target ? back('open', target.id) : back('home')}<h2 class="title">${target ? `Aggiungi a «${esc(target.name)}»` : 'Nuova materia'}</h2>
-  ${target ? '' : `<label class="field"><span>Nome della materia</span><input id="f-name" value="${esc(f.name)}" placeholder="Es. Linguistica generale" autocomplete="off"></label>`}
+  return `${target ? back('open', target.id) : back('year', f.year)}<h2 class="title">${target ? `Aggiungi a «${esc(target.name)}»` : 'Nuova materia'}</h2>
+  ${target ? '' : `<label class="field"><span>Nome della materia</span><input id="f-name" value="${esc(f.name)}" placeholder="Es. Linguistica generale" autocomplete="off"></label>
+  <label class="field"><span>Anno</span>${yearSelect('f-year', f.year)}</label>`}
   <div class="field"><span>Cosa carichi</span><div class="seg" role="radiogroup">
     <button role="radio" aria-checked="${f.kind === 'paniere'}" data-act="kind" data-arg="paniere">Paniere<small>Domande già pronte</small></button>
     <button role="radio" aria-checked="${f.kind === 'lezione'}" data-act="kind" data-arg="lezione">Lezione<small>Le domande le crea l’IA</small></button>
@@ -896,7 +919,7 @@ function vPack(){
   const est = p.qs.filter(q => isMC(q) && q.a !== null && !q.m).length;
   const missing = p.qs.filter(q => isMC(q) && q.a === null).length;
   const sel = (id, opts, cur) => `<select id="${id}">${opts.map(([v, l]) => `<option value="${esc(v)}" ${String(v) === String(cur) ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>`;
-  return `${back('home')}<h2 class="title">${esc(p.name)} <button class="link mini" data-act="rename">Rinomina</button></h2>
+  return `${back('year', p.year)}<h2 class="title">${esc(p.name)} <button class="link mini" data-act="rename">Rinomina</button></h2>
   <div class="stats">
     <div><b>${p.qs.length}</b><span>domande</span></div><div><b>${st.learned}</b><span>imparate</span></div>
     <div><b>${st.toReview}</b><span>da ripassare</span></div><div><b>${st.unseen}</b><span>mai viste</span></div></div>
@@ -923,6 +946,7 @@ function vPack(){
       ? `<p class="ans">${q.a !== null ? esc(q.o[q.a]) : 'Risposta non indicata'}${q.a !== null && !q.m ? ' <em>(scelta dall’IA)</em>' : ''}</p>`
       : (q.r ? `<p class="ans">${esc(q.r)}</p>` : '<p class="ans">Domanda aperta senza risposta modello</p>')}
       ${srcs.length > 1 ? `<p class="src">${esc(srcOf(p, q))}</p>` : ''}<button class="link" data-act="edit" data-arg="${i}">Modifica</button></li>`).join('')}</ol></details>
+  <label class="field" style="margin-top:24px"><span>Anno della materia</span>${yearSelect('p-year', p.year)}</label>
   <button class="danger-link" data-act="del" data-arg="${p.id}">Elimina questa materia</button>`;
 }
 
@@ -1000,6 +1024,7 @@ function render(){
   let html;
   switch (S.view){
     case 'home': html = vHome(); break;
+    case 'year': html = vYear(); break;
     case 'settings': html = vSettings(); break;
     case 'add': html = vAdd(); break;
     case 'answers': html = vAnswers(); break;
@@ -1017,8 +1042,9 @@ function render(){
 /* ---------- azioni ---------- */
 const H = {
   home(){ S.view = 'home'; render(); },
+  year(y){ S.year = fixYear(y); S.session = null; S.view = 'year'; render(); },
   settings(){ S.keyMsg = ''; S.view = 'settings'; render(); },
-  add(){ const f = S.add; S.add = blankAdd({ kind: f.kind, reader: f.reader, n: f.n, qtype: f.qtype }); S.view = 'add'; render(); },
+  add(){ const f = S.add; S.add = blankAdd({ year: S.year, kind: f.kind, reader: f.reader, n: f.n, qtype: f.qtype }); S.view = 'add'; render(); },
   addto(){ const f = S.add; S.add = blankAdd({ kind: f.kind, reader: f.reader, n: f.n, qtype: f.qtype, target: S.pid }); S.view = 'add'; render(); },
   open(id){ S.pid = id; S.session = null; S.edit = null; S.ans = null; S.view = 'pack'; render(); },
   kind(k){ syncAdd(); S.add.kind = k; S.add.err = ''; render(); },
@@ -1093,7 +1119,7 @@ const H = {
   async install(){ if (!installEvt) return; installEvt.prompt(); try { await installEvt.userChoice; } catch {} installEvt = null; render(); },
   del(id, el){
     if (el.dataset.sure !== '1'){ el.dataset.sure = '1'; el.textContent = 'Tocca di nuovo per eliminare'; setTimeout(() => { if (el.isConnected){ el.dataset.sure = ''; el.textContent = 'Elimina questa materia'; } }, 4000); return; }
-    const p = packOf(id); if (p) removePack(p); S.view = 'home'; render(); toast('Materia eliminata');
+    const p = packOf(id); if (p){ S.year = p.year; removePack(p); } S.view = 'year'; render(); toast('Materia eliminata');
   },
   quiz(kind){ startQuiz(kind); },
   quit(){ const s = S.session; if (s && s.res.length){ S.view = 'results'; } else { S.view = 'pack'; S.session = null; } render(); },
@@ -1145,6 +1171,7 @@ function syncAdd(){
   if (S.view !== 'add') return;
   const f = S.add;
   const n = $('#f-name'); if (n) f.name = n.value;
+  const yr = $('#f-year'); if (yr) f.year = fixYear(yr.value);
   const t = $('#f-text'); if (t) f.text = t.value;
   const at = $('#f-anstext'); if (at) f.ansText = at.value;
   const c = $('#f-n'); if (c) f.n = +c.value;
@@ -1198,6 +1225,9 @@ app.addEventListener('change', (e) => {
     syncAdd(); S.add.ansFiles = pickFiles(e.target, S.add.ansFiles); S.add.err = ''; render();
   } else if (id === 'a-file'){
     syncAns(); S.ans.files = pickFiles(e.target, S.ans.files); S.ans.err = ''; render();
+  } else if (id === 'p-year'){
+    const p = packOf(S.pid); if (!p) return;
+    p.year = S.year = fixYear(e.target.value); savePack(p); render(); toast('Materia spostata in «' + YEARS[p.year - 1] + '»');
   } else if (id === 'imp'){
     const f = e.target.files[0]; if (f) importData(f);
   } else if (S.view === 'add') syncAdd();
@@ -1217,6 +1247,7 @@ async function boot(){
     try { S.packs = await loadAll(); } catch (e){ console.error(e); toast('Non riesco a leggere i materiali salvati'); }
     if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
   }
+  for (const p of S.packs) p.year = fixYear(p.year);
   for (const p of S.packs) for (const q of p.qs){ if (q.n === undefined) q.n = null; if (q.f === undefined) q.f = ''; }
   sample = apiKey ? makeSample() : null;
   S.view = 'home'; render();
