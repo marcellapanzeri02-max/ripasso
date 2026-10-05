@@ -149,7 +149,7 @@ textarea{resize:vertical;min-height:110px}
 .toprow{display:flex;justify-content:flex-end;min-height:32px}
 .okmsg{color:var(--ok);font-size:15px;margin:8px 0}
 label.btn{cursor:pointer}
-input[type=password]{width:100%;font:inherit;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+input[type=password],input[type=search]{width:100%;font:inherit;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
 .orow{display:flex;gap:10px;align-items:center;margin-bottom:8px}
 .orow input[type=radio]{width:22px;height:22px;flex:none;accent-color:var(--ok);margin:0}
 .orow .link{flex:none;font-size:14px}
@@ -1043,12 +1043,12 @@ function vGloss(p){
     <button class="mode" data-act="gquiz" data-arg="mc" ${g.length >= 4 && inLesson.length ? '' : 'disabled'}><b>Quiz sui termini</b><span>Leggi la definizione e scegli il termine giusto</span></button>
     <button class="mode" data-act="gquiz" data-arg="errors" ${errs ? '' : 'disabled'}><b>Solo errori</b><span>${errs ? errs + (errs === 1 ? ' termine' : ' termini') + ' da ripassare' : 'Nessun errore da ripassare'}</span></button>
   </div>
-  <details class="qlist" data-key="glist" ${S.open.has('glist') ? 'open' : ''}><summary>Vedi e modifica i termini</summary>
-  <input id="g-search" placeholder="Cerca un termine" autocomplete="off" aria-label="Cerca un termine">
-  ${lessons.map(l => `<section class="glesson"><h4 class="gles">${esc(l)}</h4><dl class="gloss">${g.map((t, i) => [t, i]).filter(([t]) => lessonOf(t) === l).sort((a, b) => a[0].t.localeCompare(b[0].t, 'it'))
-      .map(([t, i]) => `<div class="gterm" data-text="${esc((t.t + ' ' + t.d).toLowerCase())}"><dt>${esc(t.t)}</dt><dd>${esc(t.d)}</dd><button class="link" data-act="gedit" data-arg="${i}">Modifica</button></div>`).join('')}</dl></section>`).join('')}
+  <h3 class="sec">Cerca un termine</h3>
+  <input id="g-search" type="search" placeholder="Cerca un termine" autocomplete="off" aria-label="Cerca un termine">
+  ${lessons.map(l => `<section class="glesson" hidden><h4 class="gles">${esc(l)}</h4><dl class="gloss">${g.map((t, i) => [t, i]).filter(([t]) => lessonOf(t) === l).sort((a, b) => a[0].t.localeCompare(b[0].t, 'it'))
+      .map(([t, i]) => `<div class="gterm" data-text="${esc(fold(t.t))}" hidden><dt>${esc(t.t)}</dt><dd>${esc(t.d)}</dd></div>`).join('')}</dl></section>`).join('')}
   <p class="note" id="g-none" hidden>Nessun termine trovato.</p>
-  ${addRow}<div style="height:14px"></div></details>`;
+  `;
 }
 function startGloss(kind){
   const p = packOf(S.pid), g = p.glossary || [];
@@ -1438,11 +1438,13 @@ function syncGEdit(){
   const v = (id) => { const el = $('#' + id); return el ? el.value : ''; };
   e.t = v('ge-t'); e.d = v('ge-d'); e.l = v('ge-l');
 }
+/* Mostra solo i termini che contengono quello che scrivi (senza badare a maiuscole e accenti); a casella vuota non mostra nulla. */
+const fold = (x) => String(x).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 function filterGloss(q){
-  q = q.trim().toLowerCase(); let any = false;
-  app.querySelectorAll('.gterm').forEach(el => { const on = !q || el.dataset.text.includes(q); el.hidden = !on; if (on) any = true; });
+  q = fold(q.trim()); let any = false;
+  app.querySelectorAll('.gterm').forEach(el => { const on = !!q && el.dataset.text.includes(q); el.hidden = !on; if (on) any = true; });
   app.querySelectorAll('.glesson').forEach(sec => { sec.hidden = ![...sec.querySelectorAll('.gterm')].some(el => !el.hidden); });
-  const none = $('#g-none'); if (none) none.hidden = any;
+  const none = $('#g-none'); if (none) none.hidden = any || !q;
 }
 function syncCustom(){
   if (S.view !== 'pack') return;
