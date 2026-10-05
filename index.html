@@ -161,6 +161,7 @@ input[type=password]{width:100%;font:inherit;color:var(--ink);background:var(--c
 .pack.year{padding:20px 20px;gap:6px}
 .pack.year .pack-name{font-size:23px;letter-spacing:.01em}
 .tabs{margin:4px 0 0}
+.crumb{margin:6px 0 -4px;color:var(--muted);font-weight:700;font-size:15px}
 .gles{font-family:inherit;font-size:15px;color:var(--muted);margin:22px 0 4px}
 .gloss{margin:0}
 .gterm{padding:12px 0;border-bottom:1px solid var(--line)}
@@ -204,7 +205,12 @@ let toastT;
 function toast(msg){ const t = $('#toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('on'), Math.max(3400, msg.length * 60)); }
 function shuffle(a){ for (let i = a.length - 1; i > 0; i--){ const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
 const packOf = (id) => S.packs.find(p => p.id === id);
-const packsOfYear = (y) => S.packs.filter(p => p.year === y);
+/* Una materia può essere divisa in parti (es. gruppi di lezioni): ogni parte è un pacchetto con parent = id della materia. */
+const packsOfYear = (y) => S.packs.filter(p => p.year === y && !p.parent);
+const allOfYear = (y) => S.packs.filter(p => p.year === y);
+const unitsOf = (p) => S.packs.filter(x => x.parent === p.id).sort((a, b) => a.name.localeCompare(b.name, 'it', { numeric: true }));
+const isContainer = (p) => S.packs.some(x => x.parent === p.id);
+const familyOf = (p) => [p, ...unitsOf(p)];
 const yearSelect = (id, cur) => `<select id="${id}">${YEARS.map((l, i) => `<option value="${i + 1}" ${i + 1 === cur ? 'selected' : ''}>${l}</option>`).join('')}</select>`;
 const fixYear = (y) => [1, 2, 3].includes(+y) ? +y : 1;
 /* Materie da mostrare per prime nel loro anno, in quest'ordine; le altre seguono in ordine alfabetico. */
@@ -801,9 +807,9 @@ const ACCEPT = 'application/pdf,.pdf,text/plain,.txt,.md,.csv';
 
 function vHome(){
   const cards = YEARS.map((label, i) => {
-    const y = i + 1, packs = packsOfYear(y);
-    const total = packs.reduce((n, p) => n + p.qs.length, 0);
-    const learned = packs.reduce((n, p) => n + stats(p).learned, 0);
+    const y = i + 1, packs = packsOfYear(y), every = allOfYear(y);
+    const total = every.reduce((n, p) => n + p.qs.length, 0);
+    const learned = every.reduce((n, p) => n + stats(p).learned, 0);
     const pct = total ? Math.round(learned / total * 100) : 0;
     return `<button class="pack year" data-act="year" data-arg="${y}">
       <span class="pack-name">${label}</span>
@@ -817,9 +823,31 @@ function vHome(){
     ${mode === 'memory' ? '<p class="note">Questo browser non permette di salvare: chiudendo l’app i materiali si perdono.</p>' : ''}`;
 }
 
+/* Riquadro riassuntivo di una materia divisa in parti, o di una singola parte. */
+function unitCard(p){
+  const fam = isContainer(p) ? unitsOf(p) : [p];
+  const nq = fam.reduce((n, u) => n + u.qs.length, 0), nt = fam.reduce((n, u) => n + (u.glossary || []).length, 0);
+  const items = nq + nt, learned = fam.reduce((n, u) => n + stats(u).learned + glossStats(u.glossary || []).learned, 0);
+  const pct = items ? Math.round(learned / items * 100) : 0;
+  const kind = isContainer(p) ? fam.length + ' parti' : (items ? '' : 'Da caricare');
+  const meta = items ? `${nq} ${nq === 1 ? 'domanda' : 'domande'} · ${nt} ${nt === 1 ? 'termine' : 'termini'}, ${pct}% imparato` : 'Ancora vuota';
+  return `<button class="pack" data-act="open" data-arg="${p.id}">
+      ${kind ? `<span class="pack-kind">${kind}</span>` : ''}
+      <span class="pack-name">${esc(p.name)}</span>
+      <span class="pack-meta">${meta}</span>
+      <span class="bar"><span style="width:${pct}%"></span></span></button>`;
+}
+function vSubject(p){
+  return `${back('year', p.year)}<h2 class="title">${esc(p.name)} <button class="link mini" data-act="rename">Rinomina</button></h2>
+  <div class="packs">${unitsOf(p).map(u => unitCard(u)).join('')}</div>
+  <label class="field" style="margin-top:24px"><span>Anno della materia</span>${yearSelect('p-year', p.year)}</label>
+  <button class="danger-link" data-act="del" data-arg="${p.id}">Elimina questa materia</button>`;
+}
+
 function vYear(){
   const y = S.year, packs = packsOfYear(y).sort(byPriority);
   const list = packs.map(p => {
+    if (isContainer(p)) return unitCard(p, 'open');
     const st = stats(p); const pct = p.qs.length ? Math.round(st.learned / p.qs.length * 100) : 0;
     const n = sourcesOf(p).length;
     return `<button class="pack" data-act="open" data-arg="${p.id}">
@@ -927,18 +955,20 @@ function vBuild(){
 
 function vPack(){
   const p = packOf(S.pid); if (!p){ S.view = 'home'; return vHome(); }
+  if (isContainer(p)) return vSubject(p);
+  const parent = p.parent ? packOf(p.parent) : null;
   const st = stats(p), srcs = sourcesOf(p), c = S.custom;
   const mcq = p.qs.filter(q => isMC(q) && q.a !== null).length;
   const est = p.qs.filter(q => isMC(q) && q.a !== null && !q.m).length;
   const missing = p.qs.filter(q => isMC(q) && q.a === null).length;
   const sel = (id, opts, cur) => `<select id="${id}">${opts.map(([v, l]) => `<option value="${esc(v)}" ${String(v) === String(cur) ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>`;
   const g = p.glossary || [];
-  const head = `${back('year', p.year)}<h2 class="title">${esc(p.name)} <button class="link mini" data-act="rename">Rinomina</button></h2>
+  const head = `${parent ? back('open', parent.id) + `<p class="crumb">${esc(parent.name)}</p>` : back('year', p.year)}<h2 class="title">${esc(p.name)} <button class="link mini" data-act="rename">Rinomina</button></h2>
   <div class="seg tabs" role="radiogroup" aria-label="Parte della materia">
     <button role="radio" aria-checked="${S.part !== 'gloss'}" data-act="part" data-arg="quiz">Paniere<small>${p.qs.length} ${p.qs.length === 1 ? 'domanda' : 'domande'}</small></button>
     <button role="radio" aria-checked="${S.part === 'gloss'}" data-act="part" data-arg="gloss">Glossario<small>${g.length} ${g.length === 1 ? 'termine' : 'termini'}</small></button>
   </div>`;
-  const foot = `<label class="field" style="margin-top:24px"><span>Anno della materia</span>${yearSelect('p-year', p.year)}</label>
+  const foot = parent ? '' : `<label class="field" style="margin-top:24px"><span>Anno della materia</span>${yearSelect('p-year', p.year)}</label>
   <button class="danger-link" data-act="del" data-arg="${p.id}">Elimina questa materia</button>`;
   if (S.part === 'gloss') return head + vGloss(p) + foot;
   if (!p.qs.length) return `${head}
@@ -1279,7 +1309,7 @@ const H = {
   async install(){ if (!installEvt) return; installEvt.prompt(); try { await installEvt.userChoice; } catch {} installEvt = null; render(); },
   del(id, el){
     if (el.dataset.sure !== '1'){ el.dataset.sure = '1'; el.textContent = 'Tocca di nuovo per eliminare'; setTimeout(() => { if (el.isConnected){ el.dataset.sure = ''; el.textContent = 'Elimina questa materia'; } }, 4000); return; }
-    const p = packOf(id); if (p){ S.year = p.year; removePack(p); } S.view = 'year'; render(); toast('Materia eliminata');
+    const p = packOf(id); if (p){ S.year = p.year; for (const x of familyOf(p)) removePack(x); } S.view = 'year'; render(); toast('Materia eliminata');
   },
   quiz(kind){ startQuiz(kind); },
   quit(){ const s = S.session; if (s && s.res.length){ S.view = 'results'; } else { S.view = 'pack'; S.session = null; } render(); },
@@ -1440,7 +1470,7 @@ app.addEventListener('change', (e) => {
     S.gles = e.target.value; render();
   } else if (id === 'p-year'){
     const p = packOf(S.pid); if (!p) return;
-    p.year = S.year = fixYear(e.target.value); savePack(p); render(); toast('Materia spostata in «' + YEARS[p.year - 1] + '»');
+    p.year = S.year = fixYear(e.target.value); for (const x of familyOf(p)){ x.year = p.year; savePack(x); } render(); toast('Materia spostata in «' + YEARS[p.year - 1] + '»');
   } else if (id === 'imp'){
     const f = e.target.files[0]; if (f) importData(f);
   } else if (S.view === 'add') syncAdd();
@@ -1480,10 +1510,28 @@ const GLOSSARY_SEEDS = [{
     ['Competenza comunicativa', 'Capacità di utilizzare la competenza grammaticale in modo adeguato allo scopo e al contesto comunicativo.']
   ]
 }];
+/* Materie divise in parti. Il contenuto già presente nella materia passa nella prima parte. */
+const UNIT_SEEDS = [{ id: 'units-ling-1', pack: 'LINGUISTICA GENERALE',
+  units: ['Lezione 1-8', 'Lezione 9-16', 'Lezione 17-24', 'Lezione 25-32', 'Lezione 33-40', 'Lezione 41-48'] }];
+async function seedUnits(){
+  for (const seed of UNIT_SEEDS){
+    if (mode === 'idb'){ try { if (await IDB.get(seed.id)) continue; } catch {} }
+    const p = S.packs.find(x => x.name.trim().toUpperCase() === seed.pack && !x.parent);
+    if (!p) continue;
+    let t = Date.now();
+    seed.units.forEach((name, i) => {
+      const u = { id: newId(), name, parent: p.id, year: p.year, kind: 'paniere', created: t++, qs: [], src: '', qtype: 'miste', glossary: [] };
+      if (i === 0){ u.qs = p.qs; u.glossary = p.glossary || []; u.src = p.src || ''; p.qs = []; p.glossary = []; p.src = ''; }
+      S.packs.push(u);
+    });
+    for (const x of familyOf(p)) await savePack(x);
+    if (mode === 'idb'){ try { await IDB.set(seed.id, true); } catch {} }
+  }
+}
 async function seedGlossary(){
   for (const seed of GLOSSARY_SEEDS){
     if (mode === 'idb'){ try { if (await IDB.get(seed.id)) continue; } catch {} }
-    const p = S.packs.find(x => x.name.trim().toUpperCase() === seed.pack);
+    const p = S.packs.find(x => x.name.trim().toUpperCase() === seed.pack && !x.parent);
     if (!p) continue;
     addTerms(p, seed.terms.map(([t, d]) => ({ t, d })), seed.lesson);
     await savePack(p);
@@ -1521,6 +1569,7 @@ async function boot(){
   for (const p of S.packs) for (const q of p.qs){ if (q.n === undefined) q.n = null; if (q.f === undefined) q.f = ''; }
   await seedPresets();
   await seedGlossary();
+  await seedUnits();
   sample = apiKey ? makeSample() : null;
   S.view = 'home'; render();
 }
