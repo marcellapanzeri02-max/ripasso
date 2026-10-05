@@ -975,7 +975,7 @@ function vPack(){
   const est = p.qs.filter(q => isMC(q) && q.a !== null && !q.m).length;
   const missing = p.qs.filter(q => isMC(q) && q.a === null).length;
   const sel = (id, opts, cur) => `<select id="${id}">${opts.map(([v, l]) => `<option value="${esc(v)}" ${String(v) === String(cur) ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>`;
-  const g = p.glossary || [];
+  const g = p.glossary || [], pre = p.pre || [];
   const head = `${parent ? back('open', parent.id) + `<p class="crumb">${esc(parent.name)}</p>` : back('year', p.year)}<h2 class="title">${esc(p.name)} <button class="link mini" data-act="rename">Rinomina</button></h2>
   <div class="seg tabs" role="radiogroup" aria-label="Parte della materia">
     <button role="radio" aria-checked="${S.part === 'gloss'}" data-act="part" data-arg="gloss">Glossario<small>${g.length} ${g.length === 1 ? 'termine' : 'termini'}</small></button>
@@ -996,26 +996,8 @@ function vPack(){
   <div class="modes">
     <button class="mode primary" data-act="quiz" data-arg="smart"><b>Ripasso intelligente</b><span>${Math.min(20, p.qs.length)} domande, più spesso quelle che sbagli</span></button>
     <button class="mode" data-act="quiz" data-arg="exam" ${mcq ? '' : 'disabled'}><b>Simulazione d’esame</b><span>${Math.min(30, mcq)} domande a scelta multipla, correzione alla fine</span></button>
-    <button class="mode" data-act="quiz" data-arg="errors" ${st.toReview ? '' : 'disabled'}><b>Solo errori</b><span>${st.toReview ? st.toReview + ' domande da ripassare' : 'Nessun errore da ripassare'}</span></button>
-    <button class="mode" data-act="quiz" data-arg="all"><b>Tutte in ordine</b><span>Dalla prima all’ultima</span></button>
+    <button class="mode" data-act="pretest" ${pre.length ? '' : 'disabled'}><b>PRIMA DEL PRETEST</b><span>${pre.length ? pre.length + (pre.length === 1 ? ' domanda' : ' domande') : 'Domande in arrivo'}</span></button>
   </div>
-  <details class="qlist" data-key="custom" ${S.open.has('custom') ? 'open' : ''}><summary>Quiz su misura</summary>
-    ${srcs.length > 1 ? `<label class="field"><span>Fonte</span>${sel('c-src', [['', 'Tutte le fonti'], ...srcs.map(s => [s, s])], c.src)}</label>` : ''}
-    <div class="row2">
-      <label class="field"><span>Domande</span>${sel('c-n', [[10, '10'], [20, '20'], [30, '30'], [50, '50'], [0, 'Tutte']], c.n)}</label>
-      <label class="field"><span>Tipo</span>${sel('c-type', [['', 'Tutte'], ['mc', 'Scelta multipla'], ['open', 'Aperte']], c.type)}</label></div>
-    <label class="field"><span>Correzione</span>${sel('c-check', [['now', 'Subito, domanda per domanda'], ['end', 'Alla fine, come all’esame (solo scelta multipla)']], c.check)}</label>
-    <button class="btn primary wide" data-act="custom" style="margin-bottom:16px">Inizia il quiz</button></details>
-  ${missing ? `<p class="warn" style="margin-top:18px">${missing} domande non hanno ancora la risposta giusta. <button class="link" data-act="answers">Carica le risposte</button></p>` : ''}
-  ${est ? `<p class="note">${est} risposte non erano segnate nel paniere e le ha scelte l’IA: puoi correggerle durante il quiz, dalla lista delle domande o caricando le risposte.</p>` : ''}
-  <h3 class="sec">Materiale</h3>
-  <div class="row" style="margin-top:0"><button class="btn ghost" data-act="addto">Aggiungi materiale</button><button class="btn ghost" data-act="answers">Carica le risposte</button></div>
-  <div class="row"><button class="btn ghost" data-act="newq">Scrivi una domanda</button>${p.src && sample ? '<button class="btn ghost" data-act="more">Crea altre 10 domande</button>' : ''}</div>
-  ${srcs.length > 1 ? `<p class="note">Fonti: ${srcs.map(esc).join(' · ')}</p>` : ''}
-  <details class="qlist" data-key="list" ${S.open.has('list') ? 'open' : ''}><summary>Vedi e modifica le domande</summary><ol>${p.qs.map((q, i) => `<li><p>${esc(q.q)}</p>${isMC(q)
-      ? `<p class="ans">${q.a !== null ? esc(q.o[q.a]) : 'Risposta non indicata'}${q.a !== null && !q.m ? ' <em>(scelta dall’IA)</em>' : ''}</p>`
-      : (q.r ? `<p class="ans">${esc(q.r)}</p>` : '<p class="ans">Domanda aperta senza risposta modello</p>')}
-      ${srcs.length > 1 ? `<p class="src">${esc(srcOf(p, q))}</p>` : ''}<button class="link" data-act="edit" data-arg="${i}">Modifica</button></li>`).join('')}</ol></details>
   ${foot}`;
 }
 
@@ -1380,6 +1362,13 @@ const H = {
     startQuiz('errors', shuffle(idx));
   },
   flip(_, el){ const s = S.session; s.flipped = !s.flipped; el.classList.toggle('flipped', s.flipped); el.setAttribute('aria-pressed', String(s.flipped)); },
+  /* PRIMA DEL PRETEST: serie di domande a parte di ogni lezione (p.pre), tutte, in ordine casuale, correzione subito */
+  pretest(){
+    const p = packOf(S.pid), pre = (p && p.pre) || [];
+    if (!pre.length) return toast('Le domande di questa parte non sono ancora state inserite');
+    S.session = { pid: p.id, kind: 'pre', items: pre, list: shuffle(pre.map((_, i) => i)), i: 0, res: [] };
+    setupQ(); S.view = 'quiz'; render();
+  },
   part(x){ S.part = x === 'gloss' ? 'gloss' : 'quiz'; render(); },
   gquiz(k){ startGloss(k); },
   gadd(){ S.gadd = { files: [], text: '', l: '', err: '' }; S.view = 'gadd'; render(); },
