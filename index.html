@@ -678,7 +678,7 @@ async function build(){
   S.year = p.year;
   S.build = null; S.pid = p.id; S.view = 'pack'; render();
   const msgs = [];
-  if (target) msgs.push(added ? `Aggiunte ${added} domande.` : 'Queste domande c’erano già tutte.');
+  if (target) msgs.push(added ? (added === 1 ? 'Aggiunta 1 domanda.' : `Aggiunte ${added} domande.`) : 'Queste domande c’erano già tutte.');
   if (ansMsg) msgs.push(ansMsg);
   if (fatal) msgs.push(errCopy(fatal) + ' Ho tenuto le domande trovate finora.');
   else if (failed) msgs.push(`${failed} ${failed === 1 ? 'parte non è stata letta' : 'parti non sono state lette'}: alcune domande potrebbero mancare.`);
@@ -805,14 +805,14 @@ function vHome(){
 }
 
 function vYear(){
-  const y = S.year, packs = packsOfYear(y);
+  const y = S.year, packs = packsOfYear(y).sort((a, b) => a.name.localeCompare(b.name, 'it'));
   const list = packs.map(p => {
     const st = stats(p); const pct = p.qs.length ? Math.round(st.learned / p.qs.length * 100) : 0;
     const n = sourcesOf(p).length;
     return `<button class="pack" data-act="open" data-arg="${p.id}">
-      <span class="pack-kind">${n > 1 ? n + ' fonti' : (p.kind === 'lezione' ? 'Lezione' : 'Paniere')}</span>
+      <span class="pack-kind">${!p.qs.length ? 'Da caricare' : n > 1 ? n + ' fonti' : (p.kind === 'lezione' ? 'Lezione' : 'Paniere')}</span>
       <span class="pack-name">${esc(p.name)}</span>
-      <span class="pack-meta">${p.qs.length} domande, ${pct}% imparate</span>
+      <span class="pack-meta">${p.qs.length ? `${p.qs.length} ${p.qs.length === 1 ? 'domanda' : 'domande'}, ${pct}% imparate` : 'Nessuna domanda: tocca per caricare il paniere'}</span>
       <span class="bar"><span style="width:${pct}%"></span></span></button>`;
   }).join('');
   return `${back('home')}<h2 class="title">${YEARS[y - 1]}</h2>
@@ -919,7 +919,14 @@ function vPack(){
   const est = p.qs.filter(q => isMC(q) && q.a !== null && !q.m).length;
   const missing = p.qs.filter(q => isMC(q) && q.a === null).length;
   const sel = (id, opts, cur) => `<select id="${id}">${opts.map(([v, l]) => `<option value="${esc(v)}" ${String(v) === String(cur) ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>`;
-  return `${back('year', p.year)}<h2 class="title">${esc(p.name)} <button class="link mini" data-act="rename">Rinomina</button></h2>
+  const head = `${back('year', p.year)}<h2 class="title">${esc(p.name)} <button class="link mini" data-act="rename">Rinomina</button></h2>`;
+  if (!p.qs.length) return `${head}
+  <div class="empty" style="margin-top:0">Ancora nessuna domanda in questa materia.<br>Carica il paniere per iniziare a ripassare.</div>
+  <div class="row"><button class="btn primary" data-act="addto">Carica il paniere</button></div>
+  <div class="row"><button class="btn ghost" data-act="newq">Scrivi una domanda</button></div>
+  <label class="field" style="margin-top:24px"><span>Anno della materia</span>${yearSelect('p-year', p.year)}</label>
+  <button class="danger-link" data-act="del" data-arg="${p.id}">Elimina questa materia</button>`;
+  return `${head}
   <div class="stats">
     <div><b>${p.qs.length}</b><span>domande</span></div><div><b>${st.learned}</b><span>imparate</span></div>
     <div><b>${st.toReview}</b><span>da ripassare</span></div><div><b>${st.unseen}</b><span>mai viste</span></div></div>
@@ -1239,6 +1246,25 @@ window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); inst
 window.addEventListener('appinstalled', () => { installEvt = null; toast('App installata'); });
 
 /* ---------- avvio ---------- */
+/* Materie già pronte per ogni anno. Vengono create una sola volta (PRESETS_ID): se ne elimini una, non ricompare.
+   Per aggiungerne altre in futuro, aggiungile qui e cambia PRESETS_ID. */
+const PRESETS_ID = 'presets-1';
+const PRESETS = {
+  1: ['GEOGRAFIA CULTURALE', 'LETTERATURA INGLESE 1 B', 'LINGUA E TRADUZIONE INGLESE 1 A', 'LINGUISTICA GENERALE']
+};
+async function seedPresets(){
+  let done = false;
+  if (mode === 'idb'){ try { done = !!(await IDB.get(PRESETS_ID)); } catch {} }
+  if (done) return;
+  const have = new Set(S.packs.map(p => p.name.trim().toLowerCase()));
+  let t = Date.now();
+  for (const [y, names] of Object.entries(PRESETS)) for (const name of names){
+    if (have.has(name.toLowerCase())) continue;
+    const p = { id: newId(), name, year: +y, kind: 'paniere', created: t++, qs: [], src: '', qtype: 'miste' };
+    S.packs.push(p); await savePack(p);
+  }
+  if (mode === 'idb'){ try { await IDB.set(PRESETS_ID, true); } catch {} }
+}
 async function boot(){
   render();
   try { await IDB.open(); mode = 'idb'; } catch (e){ console.error(e); mode = 'memory'; }
@@ -1249,6 +1275,7 @@ async function boot(){
   }
   for (const p of S.packs) p.year = fixYear(p.year);
   for (const p of S.packs) for (const q of p.qs){ if (q.n === undefined) q.n = null; if (q.f === undefined) q.f = ''; }
+  await seedPresets();
   sample = apiKey ? makeSample() : null;
   S.view = 'home'; render();
 }
