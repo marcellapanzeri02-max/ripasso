@@ -978,8 +978,8 @@ function vPack(){
   const g = p.glossary || [];
   const head = `${parent ? back('open', parent.id) + `<p class="crumb">${esc(parent.name)}</p>` : back('year', p.year)}<h2 class="title">${esc(p.name)} <button class="link mini" data-act="rename">Rinomina</button></h2>
   <div class="seg tabs" role="radiogroup" aria-label="Parte della materia">
-    <button role="radio" aria-checked="${S.part !== 'gloss'}" data-act="part" data-arg="quiz">Paniere<small>${p.qs.length} ${p.qs.length === 1 ? 'domanda' : 'domande'}</small></button>
     <button role="radio" aria-checked="${S.part === 'gloss'}" data-act="part" data-arg="gloss">Glossario<small>${g.length} ${g.length === 1 ? 'termine' : 'termini'}</small></button>
+    <button role="radio" aria-checked="${S.part !== 'gloss'}" data-act="part" data-arg="quiz">Paniere<small>${p.qs.length} ${p.qs.length === 1 ? 'domanda' : 'domande'}</small></button>
   </div>`;
   const foot = parent ? '' : `<label class="field" style="margin-top:24px"><span>Anno della materia</span>${yearSelect('p-year', p.year)}</label>
   <button class="danger-link" data-act="del" data-arg="${p.id}">Elimina questa materia</button>`;
@@ -1039,16 +1039,16 @@ function vGloss(p){
     <div><b>${st.toReview}</b><span>da ripassare</span></div><div><b>${st.unseen}</b><span>mai visti</span></div></div>
   ${lessons.length > 1 ? `<label class="field"><span>Studia</span><select id="g-les"><option value="">Tutte le lezioni</option>${lessons.map(l => `<option value="${esc(l)}" ${l === S.gles ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></label>` : ''}
   <div class="modes">
-    <button class="mode primary" data-act="gquiz" data-arg="cards"><b>Flashcard</b><span>Davanti il termine: tocca la carta per girarla e trovare la definizione</span></button>
+    <button class="mode primary" data-act="gquiz" data-arg="cards"><b>Schede</b><span>Davanti il termine: tocca la scheda per girarla e trovare la definizione</span></button>
     <button class="mode" data-act="gquiz" data-arg="mc" ${g.length >= 4 && inLesson.length ? '' : 'disabled'}><b>Quiz sui termini</b><span>Leggi la definizione e scegli il termine giusto</span></button>
     <button class="mode" data-act="gquiz" data-arg="errors" ${errs ? '' : 'disabled'}><b>Solo errori</b><span>${errs ? errs + (errs === 1 ? ' termine' : ' termini') + ' da ripassare' : 'Nessun errore da ripassare'}</span></button>
   </div>
-  <h3 class="sec">Termini</h3>
+  <details class="qlist" data-key="glist" ${S.open.has('glist') ? 'open' : ''}><summary>Vedi e modifica i termini</summary>
   <input id="g-search" placeholder="Cerca un termine" autocomplete="off" aria-label="Cerca un termine">
   ${lessons.map(l => `<section class="glesson"><h4 class="gles">${esc(l)}</h4><dl class="gloss">${g.map((t, i) => [t, i]).filter(([t]) => lessonOf(t) === l).sort((a, b) => a[0].t.localeCompare(b[0].t, 'it'))
       .map(([t, i]) => `<div class="gterm" data-text="${esc((t.t + ' ' + t.d).toLowerCase())}"><dt>${esc(t.t)}</dt><dd>${esc(t.d)}</dd><button class="link" data-act="gedit" data-arg="${i}">Modifica</button></div>`).join('')}</dl></section>`).join('')}
   <p class="note" id="g-none" hidden>Nessun termine trovato.</p>
-  ${addRow}`;
+  ${addRow}<div style="height:14px"></div></details>`;
 }
 function startGloss(kind){
   const p = packOf(S.pid), g = p.glossary || [];
@@ -1253,7 +1253,7 @@ const H = {
   add(){ const f = S.add; S.add = blankAdd({ year: S.year, kind: f.kind, reader: f.reader, n: f.n, qtype: f.qtype }); S.view = 'add'; render(); },
   addto(){ const f = S.add; S.add = blankAdd({ kind: f.kind, reader: f.reader, n: f.n, qtype: f.qtype, target: S.pid }); S.view = 'add'; render(); },
   open(id){
-    if (id !== S.pid){ const p = packOf(id); S.part = p && !p.qs.length && (p.glossary || []).length ? 'gloss' : 'quiz'; S.gles = ''; }
+    if (id !== S.pid){ const p = packOf(id); S.part = p && (p.glossary || []).length ? 'gloss' : 'quiz'; S.gles = ''; }
     S.pid = id; S.session = null; S.edit = null; S.ans = null; S.gadd = null; S.gedit = null; S.view = 'pack'; render();
   },
   kind(k){ syncAdd(); S.add.kind = k; S.add.err = ''; render(); },
@@ -1548,6 +1548,58 @@ async function seedUnits(){
     if (mode === 'idb'){ try { await IDB.set(seed.id, true); } catch {} }
   }
 }
+/* Domande del paniere da aggiungere una sola volta a una parte di una materia: [domanda, [opzioni A-D], indice della risposta giusta]. */
+const QUESTION_SEEDS = [{
+  id: 'paniere-ling-l1-8', pack: 'LINGUISTICA GENERALE', unit: 'Lezione 1-8',
+  sets: [{ f: 'Domande 1-15 (serie 1)', qs: [
+    ['Qual è il principale vantaggio dei codici articolati?', ['Eliminano completamente la necessità di memorizzare i segni', 'Rendono tutti i messaggi privi di ambiguità', 'Impediscono la formazione di nuovi significati', 'Permettono di ottenere molti messaggi combinando un numero limitato di elementi'], 3],
+    ['Quale proprietà condividono l’aritmetica e il linguaggio naturale secondo il capitolo?', ['L’assenza di combinazioni', 'La totale dipendenza dal contesto', 'La sinonimia', 'L’assenza di ambiguità strutturale'], 2],
+    ['Le grida di allarme dei cercopitechi verdi sono un esempio di comunicazione:', ['Scritta e simbolica', 'Articolata e sinonimica', 'Triadica', 'Puramente diadica'], 2],
+    ['Che cosa significa che un codice è “articolato”?', ['Che non possiede regole di combinazione', 'Che ogni segno ha un unico referente concreto', 'Che i suoi significanti possono essere scomposti in parti', 'Che contiene esclusivamente segnali emotivi'], 2],
+    ['Che cosa si intende per “permanenza dell’oggetto”?', ['La capacità di riconoscere soltanto gli oggetti presenti', 'La capacità di combinare parole diverse in una frase', 'La capacità di ricordare un referente anche quando non è più percepibile', 'La capacità di dare un nome permanente agli oggetti'], 2],
+    ['Quale delle seguenti è una delle condizioni necessarie per ottenere un codice potenzialmente infinito?', ['Il numero dei posti dei raggruppamenti non deve avere un limite teorico', 'Il numero degli elementi deve essere necessariamente finito', 'L’ordine degli elementi deve essere sempre irrilevante', 'Ogni elemento deve poter essere utilizzato una sola volta'], 0],
+    ['Perché i codici non articolati tendono ad avere un numero finito di elementi?', ['Perché utilizzano necessariamente la scrittura', 'Perché ogni segno deve essere memorizzato nella sua interezza', 'Perché possiedono un numero infinito di combinazioni', 'Perché non possono contenere alcun referente'], 1],
+    ['Qual è uno degli obiettivi principali del primo capitolo?', ['Studiare esclusivamente la comunicazione tra specie diverse', 'Descrivere esclusivamente la grammatica dell’italiano', 'Esaminare le proprietà universali del linguaggio umano', 'Analizzare soltanto l’evoluzione della scrittura'], 2],
+    ['Quale tipo di comunicazione viene privilegiato nell’analisi dei codici animali?', ['La comunicazione intraspecifica', 'La comunicazione interspecifica', 'La comunicazione esclusivamente gestuale', 'La comunicazione esclusivamente vocale'], 0],
+    ['Che cosa caratterizza i messaggi diadici?', ['Sono sempre costituiti da più parole', 'Non possiedono un referente esterno', 'Possiedono necessariamente un referente visibile', 'Sono caratterizzati dalla sinonimia'], 1],
+    ['Quale dei seguenti è presentato come esempio di messaggio diadico?', ['Una frase interrogativa complessa', 'Il nome di un animale pronunciato in sua assenza', 'Il saluto “ciao”', 'Un grido d’allarme che segnala un leopardo'], 2],
+    ['Perché la sinonimia delle lingue storico-naturali viene definita “non calcolabile”?', ['Perché ogni parola ha necessariamente un solo significato', 'Perché il numero delle possibili espressioni sinonimiche è potenzialmente incalcolabile', 'Perché la sinonimia riguarda soltanto i calcoli matematici', 'Perché le lingue non possiedono regole combinatorie'], 1],
+    ['Quale caratteristica accomuna i codici della certezza descritti nel capitolo?', ['Sono privi di ambiguità e sinonimia', 'Dipendono fortemente dal contesto pragmatico', 'Permettono un numero illimitato di interpretazioni', 'Possiedono sempre un numero infinito di elementi'], 0],
+    ['Nel codice Morse, l’aumento degli elementi utilizzabili nelle combinazioni produce:', ['Una diminuzione del numero dei messaggi', 'La perdita della possibilità di articolare i messaggi', 'Un consistente aumento del numero dei raggruppamenti possibili', 'L’eliminazione delle regole combinatorie'], 2],
+    ['Che cosa caratterizza i messaggi triadici?', ['Non hanno mai alcun rapporto con la realtà esterna', 'Possono rinviare a un referente esterno', 'Sono sempre costituiti da frasi complesse', 'Possiedono necessariamente un numero infinito di elementi'], 1]
+  ] }, { f: 'Domande 1-15 (serie 2)', qs: [
+    ['Che cosa si intende per modularità del linguaggio?', ['I diversi livelli linguistici non interagiscono tra loro', 'Ogni lingua possiede un solo modulo indipendente dagli altri', 'Il linguaggio è costituito da diversi sottosistemi che lavorano in modo coordinato', 'Il linguaggio è formato esclusivamente da un unico sistema grammaticale'], 2],
+    ['Che cosa si intende per produttività del linguaggio?', ['La capacità di utilizzare soltanto parole già presenti nei dizionari', 'La capacità di creare nuove parole e nuove frasi attraverso regole linguistiche', 'La capacità di ripetere sempre le stesse frasi', 'La capacità di eliminare le parole poco frequenti'], 1],
+    ['Quale esempio viene utilizzato nel capitolo per illustrare la polisemia?', ['La parola “linguaggio”', 'La parola “macchine”', 'La parola “albero”', 'La parola “numero”'], 1],
+    ['Qual è la differenza principale tra competenza grammaticale e competenza comunicativa?', ['La competenza grammaticale comprende soltanto le regole della sintassi', 'La competenza comunicativa riguarda esclusivamente la conoscenza del vocabolario', 'La competenza comunicativa comprende la conoscenza grammaticale e la capacità di usarla in relazione agli scopi e ai contesti comunicativi', 'La competenza grammaticale riguarda soltanto la pronuncia, mentre quella comunicativa riguarda soltanto la scrittura'], 2],
+    ['Quale modulo studia la struttura interna delle parole?', ['La morfologia', 'La fonetica', 'La semantica', 'La sintassi'], 0],
+    ['Secondo l’approccio descrittivo, come dovrebbe comportarsi il linguista nei confronti delle diverse varietà linguistiche?', ['Considerare scientificamente valide soltanto le varietà utilizzate dalle persone istruite', 'Stabilire quali varietà siano linguisticamente superiori', 'Studiare e descrivere le varietà senza considerarle intrinsecamente migliori o peggiori', 'Cercare di eliminare le varietà considerate scorrette'], 2],
+    ['Che cosa significa che il linguaggio è arbitrario?', ['Che tutte le lingue utilizzano gli stessi suoni', 'Che le lingue funzionano senza regole', 'Che non esiste, nella maggior parte dei casi, una connessione necessaria tra forma linguistica e significato', 'Che i parlanti scelgono casualmente le parole durante ogni conversazione'], 2],
+    ['Secondo il capitolo, le lingue aumentano nel tempo il proprio tasso di polisemia soprattutto attraverso:', ['L’eliminazione dei sinonimi', 'La trasformazione delle parole in numeri', 'L’estensione metaforica dei segni', 'La riduzione del lessico'], 2],
+    ['Che cosa si intende per ambiguità strutturale?', ['Una parola può essere pronunciata in più lingue', 'Una frase può essere interpretata in più modi a causa della sua struttura', 'Una frase può essere tradotta in più lingue', 'Un suono può essere prodotto da parlanti diversi'], 1],
+    ['Che cosa indica la proprietà della discretezza?', ['Il linguaggio suddivide continui, come quello dei suoni, in categorie distinte', 'I significati delle parole non possono essere classificati', 'Tutte le lingue utilizzano esattamente gli stessi suoni', 'Il linguaggio utilizza esclusivamente suoni continui'], 0],
+    ['Nella frase “Mario vide suo padre in piazza col binocolo”, l’ambiguità riguarda:', ['Il numero dei partecipanti alla scena', 'Il significato della parola “piazza”', 'Chi utilizza il binocolo', 'Il luogo in cui si trova Mario'], 2],
+    ['Che cosa si intende per polisemia?', ['La possibilità che parole diverse abbiano lo stesso significato', 'La possibilità di combinare soltanto due parole alla volta', 'La possibilità che una stessa parola abbia più significati', 'L’assenza di qualsiasi significato associato alle parole'], 2],
+    ['Quale modulo studia la struttura delle frasi?', ['Il lessico', 'La sintassi', 'La fonologia', 'La fonetica'], 1],
+    ['Perché la ricorsività implica che non sia possibile imparare una lingua memorizzando tutte le frasi?', ['Perché le parole non possono essere memorizzate', 'Perché una lingua permette di produrre un numero infinito di frasi', 'Perché le frasi di una lingua non hanno significato', 'Perché ogni lingua possiede un numero limitato di frasi'], 1],
+    ['Che cosa si intende per ricorsività?', ['La possibilità di pronunciare ogni suono in modo diverso', 'La possibilità di eliminare progressivamente gli elementi di una frase', 'La possibilità di applicare ripetutamente processi grammaticali per produrre strutture sempre più complesse', 'La capacità di associare un solo significato a ogni parola'], 2]
+  ] }]
+}];
+async function seedQuestions(){
+  for (const seed of QUESTION_SEEDS){
+    if (mode === 'idb'){ try { if (await IDB.get(seed.id)) continue; } catch {} }
+    const top = S.packs.find(x => x.name.trim().toUpperCase() === seed.pack && !x.parent);
+    const u = top && unitsOf(top).find(x => x.name === seed.unit);
+    if (!u) continue;
+    const keys = new Set(u.qs.map(keyOf));
+    for (const set of seed.sets) set.qs.forEach(([q, o, a], i) => {
+      const item = { id: newId(), q, o, a, m: true, x: '', r: '', n: i + 1, f: set.f, s: { c: 0, w: 0, b: 0, t: 0 } };
+      if (!keys.has(keyOf(item))){ keys.add(keyOf(item)); u.qs.push(item); }
+    });
+    await savePack(u);
+    if (mode === 'idb'){ try { await IDB.set(seed.id, true); } catch {} }
+  }
+}
 async function seedGlossary(){
   for (const seed of GLOSSARY_SEEDS){
     if (mode === 'idb'){ try { if (await IDB.get(seed.id)) continue; } catch {} }
@@ -1590,6 +1642,7 @@ async function boot(){
   await seedPresets();
   await seedGlossary();
   await seedUnits();
+  await seedQuestions();
   sample = apiKey ? makeSample() : null;
   S.view = 'home'; render();
 }
