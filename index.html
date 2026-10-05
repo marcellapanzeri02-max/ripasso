@@ -474,7 +474,7 @@ function parseKey(text){
   const items = [], seen = new Set(); let m, covered = 0;
   while ((m = re.exec(t))){ if (seen.has(m[1])) continue; seen.add(m[1]); items.push({ n: +m[1], l: m[2], q: '', t: '' }); covered += m[0].trim().length; }
   const body = t.replace(/\s+/g, '').length;
-  return items.length >= 3 && covered >= body * 0.5 ? items : [];
+  return items.length && covered >= body * 0.5 ? items : [];
 }
 async function readAnswers(text, targetCount){
   const key = parseKey(text);
