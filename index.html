@@ -1095,7 +1095,10 @@ function vLesson(){
   const parent = p.parent ? packOf(p.parent) : null, n = S.lesson;
   const L = pretestOf(p, n), qs = L ? L.qs : [], imgs = lessonImages(p, n), terms = lessonTerms(p, n);
   const learned = qs.filter(q => q.s.b >= 3).length, toReview = qs.filter(q => q.s.t && q.s.b < 3 && q.s.w > 0).length, unseen = qs.filter(q => q.s.t === 0).length;
-  const tab = S.lpart === 'img' ? 'img' : (S.lpart === 'gl' && terms.length ? 'gl' : 'q');
+  /* Una lezione-glossario (con termini e senza immagini) ha Glossario e Domande; le altre Spiegazione, Domande e, se ci sono termini, Glossario. */
+  const parts = terms.length && !imgs.length ? ['gl', 'q'] : ['img', 'q'].concat(terms.length ? ['gl'] : []);
+  const tab = parts.includes(S.lpart) ? S.lpart : parts[0];
+  const termQuiz = terms.length >= 4;
   const gs = glossStats(terms), gErr = terms.filter(t => t.s.w > 0 && t.s.b < 3).length;
   const body = tab === 'gl' ? `<div class="stats" style="margin-top:18px">
         <div><b>${terms.length}</b><span>termini</span></div><div><b>${gs.learned}</b><span>imparati</span></div>
@@ -1105,20 +1108,26 @@ function vLesson(){
         <button class="mode" data-act="lgloss" data-arg="errors" ${gErr ? '' : 'disabled'}><b>Solo errori</b><span>${gErr ? gErr + (gErr === 1 ? ' termine' : ' termini') + ' da ripassare' : 'Nessun errore da ripassare'}</span></button>
       </div>`
     : tab === 'q'
-    ? (qs.length ? `<div class="stats" style="margin-top:18px">
+    ? (qs.length || termQuiz ? `${qs.length ? `<div class="stats" style="margin-top:18px">
         <div><b>${qs.length}</b><span>domande</span></div><div><b>${learned}</b><span>imparate</span></div>
-        <div><b>${toReview}</b><span>da ripassare</span></div><div><b>${unseen}</b><span>mai viste</span></div></div>
-      <div class="modes"><button class="mode primary" data-act="prelesson" data-arg="${n}"><b>Inizia le domande</b><span>Tutte le ${qs.length} domande della lezione, correzione subito</span></button></div>`
+        <div><b>${toReview}</b><span>da ripassare</span></div><div><b>${unseen}</b><span>mai viste</span></div></div>` : ''}
+      <div class="modes" ${qs.length ? '' : 'style="margin-top:18px"'}>
+        ${qs.length ? `<button class="mode primary" data-act="prelesson" data-arg="${n}"><b>Inizia le domande</b><span>Tutte le ${qs.length} domande della lezione, correzione subito</span></button>` : ''}
+        ${termQuiz ? `<button class="mode ${qs.length ? '' : 'primary'}" data-act="lgloss" data-arg="mc"><b>Quiz sui termini</b><span>Leggi la definizione e scegli il termine giusto, tra i ${terms.length} termini della lezione</span></button>` : ''}
+      </div>`
       : '<div class="empty">Le domande di questa lezione sono in arrivo.</div>')
     : (imgs.length ? `<div class="lesson-imgs">${imgs.map((src, i) => `<button class="limg" data-act="zoom" data-arg="${esc(src)}" aria-label="Ingrandisci l’immagine ${i + 1}"><img src="${esc(src)}" alt="Spiegazione della lezione ${n}${imgs.length > 1 ? ', parte ' + (i + 1) : ''}" loading="lazy"></button>`).join('')}</div>
       <p class="note">Tocca l’immagine per ingrandirla.</p>`
       : '<div class="empty">La spiegazione di questa lezione è in arrivo.</div>');
+  const label = {
+    img: `Spiegazione<small>${imgs.length ? (imgs.length === 1 ? '1 immagine' : imgs.length + ' immagini') : 'in arrivo'}</small>`,
+    q: `Domande<small>${qs.length ? qs.length + ' domande' + (termQuiz ? ' + quiz' : '') : (termQuiz ? 'quiz sui termini' : 'in arrivo')}</small>`,
+    gl: `Glossario<small>${terms.length} termini</small>`
+  };
   return `${back('open', parent ? parent.id : p.id)}<p class="crumb">${parent ? esc(parent.name) + ' · ' : ''}Lezioni</p><h2 class="title">Lezione ${n}</h2>
   ${L && L.title ? `<p class="lede" style="margin:-8px 0 16px">${esc(L.title)}</p>` : ''}
-  <div class="seg tabs ${terms.length ? 'three' : ''}" role="radiogroup" aria-label="Sezione della lezione">
-    <button role="radio" aria-checked="${tab === 'img'}" data-act="lpart" data-arg="img">Spiegazione<small>${imgs.length ? (imgs.length === 1 ? '1 immagine' : imgs.length + ' immagini') : 'in arrivo'}</small></button>
-    <button role="radio" aria-checked="${tab === 'q'}" data-act="lpart" data-arg="q">Domande<small>${qs.length ? qs.length + ' domande' : 'in arrivo'}</small></button>
-    ${terms.length ? `<button role="radio" aria-checked="${tab === 'gl'}" data-act="lpart" data-arg="gl">Glossario<small>${terms.length} termini</small></button>` : ''}
+  <div class="seg tabs ${parts.length === 3 ? 'three' : ''}" role="radiogroup" aria-label="Sezione della lezione">
+    ${parts.map(k => `<button role="radio" aria-checked="${tab === k}" data-act="lpart" data-arg="${k}">${label[k]}</button>`).join('')}
   </div>${body}`;
 }
 
@@ -1175,7 +1184,7 @@ function startGloss(kind, pool, pid, skind){
   /* Schede e Solo errori seguono sempre l'ordine dei PDF: lezioni in ordine numerico, termini come compaiono nel PDF. */
   if (kind === 'cards' || kind === 'errors'){ idx = pdfOrder(g, idx); if (kind === 'errors') idx = idx.filter(i => g[i].s.w > 0 && g[i].s.b < 3); }
   else idx = idx.map(i => { const s = g[i].s; const w = s.t === 0 ? 3 : (5 - Math.min(s.b, 4)) + (s.w > s.c ? 2 : 0); return [i, Math.pow(Math.random(), 1 / w)]; })
-    .sort((a, b) => b[1] - a[1]).slice(0, 20).map(x => x[0]);
+    .sort((a, b) => b[1] - a[1]).slice(0, pool ? Infinity : 20).map(x => x[0]);   /* dalla lezione: tutti i suoi termini */
   if (!idx.length) return toast('Non ci sono termini per questa scelta');
   const items = idx.map(i => {
     const t = g[i];
@@ -1503,7 +1512,7 @@ const H = {
   flip(_, el){ const s = S.session; s.flipped = !s.flipped; el.classList.toggle('flipped', s.flipped); el.setAttribute('aria-pressed', String(s.flipped)); },
   /* PRIMA DEL PRETEST: serie di domande a parte di ogni lezione (p.pre), tutte, in ordine casuale, correzione subito */
   lesson(arg){
-    if (arg !== undefined){ const [pid, n] = String(arg).split(':'); if (n === undefined){ S.lesson = +pid; } else { S.lessonPid = pid; S.lesson = +n; S.lpart = 'img'; } }
+    if (arg !== undefined){ const [pid, n] = String(arg).split(':'); if (n === undefined){ S.lesson = +pid; } else { S.lessonPid = pid; S.lesson = +n; S.lpart = ''; } }
     S.session = null; S.view = 'lesson'; render();
   },
   openpart(id){ H.open(id); S.part = 'quiz'; render(); },
