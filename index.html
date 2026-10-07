@@ -161,6 +161,16 @@ input[type=password],input[type=search]{width:100%;font:inherit;color:var(--ink)
 .pack.year{padding:20px 20px;gap:6px}
 .pack.year .pack-name{font-size:23px;letter-spacing:.01em}
 .tabs{margin:4px 0 0}
+.tabs.three{grid-template-columns:repeat(3,1fr);gap:8px}
+.tabs.three button{padding:10px 10px}
+.lesson-imgs{display:grid;gap:12px;margin-top:18px}
+.limg{display:block;width:100%;padding:0;border:1px solid var(--line);border-radius:16px;overflow:hidden;background:#fff;cursor:zoom-in}
+.limg img{display:block;width:100%;height:auto}
+.zoom{position:fixed;inset:0;z-index:20;background:rgba(10,14,28,.94);display:flex;flex-direction:column}
+.zoom-x{align-self:flex-end;margin:calc(10px + env(safe-area-inset-top,0px)) 12px 6px;width:48px;height:48px;border-radius:50%;border:0;background:#fff;color:#17203A;font-size:30px;line-height:1;cursor:pointer}
+.zoom-in{flex:1;overflow:auto;-webkit-overflow-scrolling:touch;padding:0 8px calc(16px + env(safe-area-inset-bottom,0px))}
+.zoom-in img{display:block;width:100%;height:auto;background:#fff;border-radius:8px;cursor:zoom-in}
+.zoom-in img.big{width:220%;max-width:none;cursor:zoom-out}
 .pack:disabled{opacity:.5;cursor:default}
 .flip{display:block;width:100%;padding:0;border:0;background:none;perspective:1400px;cursor:pointer;text-align:center;color:inherit;font:inherit}
 .flip:focus-visible{outline:none}
@@ -976,28 +986,28 @@ function vPack(){
   const est = p.qs.filter(q => isMC(q) && q.a !== null && !q.m).length;
   const missing = p.qs.filter(q => isMC(q) && q.a === null).length;
   const sel = (id, opts, cur) => `<select id="${id}">${opts.map(([v, l]) => `<option value="${esc(v)}" ${String(v) === String(cur) ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>`;
-  const g = p.glossary || [], nums = lessonNums(p), preN = (p.pretest || []).reduce((n, L) => n + L.qs.length, 0);
-  const preBtn = `<button class="mode" data-act="pretest" ${nums.length ? '' : 'disabled'}><b>PRIMA DEL PRETEST</b><span>${nums.length ? `Domande divise per lezione, dalla ${nums[0]} alla ${nums[nums.length - 1]}${preN ? '' : ' (in arrivo)'}` : 'Domande in arrivo'}</span></button>`;
+  const g = p.glossary || [], nums = lessonNums(p);
+  if (S.part === 'lessons' && !nums.length) S.part = 'quiz';
   const head = `${parent ? back('open', parent.id) + `<p class="crumb">${esc(parent.name)}</p>` : back('year', p.year)}<h2 class="title">${esc(p.name)} <button class="link mini" data-act="rename">Rinomina</button></h2>
-  <div class="seg tabs" role="radiogroup" aria-label="Parte della materia">
+  <div class="seg tabs ${nums.length ? 'three' : ''}" role="radiogroup" aria-label="Parte della materia">
     <button role="radio" aria-checked="${S.part === 'gloss'}" data-act="part" data-arg="gloss">Glossario<small>${g.length} ${g.length === 1 ? 'termine' : 'termini'}</small></button>
-    <button role="radio" aria-checked="${S.part !== 'gloss'}" data-act="part" data-arg="quiz">Paniere<small>${p.qs.length} ${p.qs.length === 1 ? 'domanda' : 'domande'}</small></button>
+    <button role="radio" aria-checked="${S.part === 'quiz'}" data-act="part" data-arg="quiz">Paniere<small>${p.qs.length} ${p.qs.length === 1 ? 'domanda' : 'domande'}</small></button>
+    ${nums.length ? `<button role="radio" aria-checked="${S.part === 'lessons'}" data-act="part" data-arg="lessons">Lezioni<small>${nums.length} lezioni</small></button>` : ''}
   </div>`;
   const foot = parent ? '' : `<label class="field" style="margin-top:24px"><span>Anno della materia</span>${yearSelect('p-year', p.year)}</label>
   <button class="danger-link" data-act="del" data-arg="${p.id}">Elimina questa materia</button>`;
   if (S.part === 'gloss') return head + vGloss(p) + foot;
+  if (S.part === 'lessons') return head + vLessons(p) + foot;
   /* parte di una materia con il paniere ancora vuoto: stessi pulsanti, spenti finché non arrivano le domande */
   if (!p.qs.length && parent) return `${head}
   <div class="modes" style="margin-top:18px">
     <button class="mode" disabled><b>Ripasso intelligente</b><span>Domande in arrivo</span></button>
     <button class="mode" disabled><b>Simulazione d’esame</b><span>Domande in arrivo</span></button>
-    ${preBtn}
   </div>`;
   if (!p.qs.length) return `${head}
   <div class="empty">Ancora nessuna domanda del paniere.<br>Caricalo per iniziare a ripassare.</div>
   <div class="row"><button class="btn primary" data-act="addto">Carica il paniere</button></div>
   <div class="row"><button class="btn ghost" data-act="newq">Scrivi una domanda</button></div>
-  ${nums.length ? `<div class="modes" style="margin-top:22px">${preBtn}</div>` : ''}
   ${foot}`;
   return `${head}
   <div class="stats" style="margin-top:18px">
@@ -1006,33 +1016,73 @@ function vPack(){
   <div class="modes">
     <button class="mode primary" data-act="quiz" data-arg="smart"><b>Ripasso intelligente</b><span>${Math.min(20, p.qs.length)} domande, più spesso quelle che sbagli</span></button>
     <button class="mode" data-act="quiz" data-arg="exam" ${mcq ? '' : 'disabled'}><b>Simulazione d’esame</b><span>${Math.min(30, mcq)} domande a scelta multipla, correzione alla fine</span></button>
-    ${preBtn}
   </div>
   ${foot}`;
 }
 
-/* ---------- prima del pretest ---------- */
-/* Le lezioni di una parte si ricavano dal nome (es. «Lezione 1-8» → 1…8); per ognuna p.pretest può avere una serie di domande. */
+/* ---------- lezioni ---------- */
+/* Le lezioni di una parte si ricavano dal nome (es. «Lezione 1-8» → 1…8). Per ognuna p.pretest può avere una serie di domande
+   e LESSON_IMAGES le immagini della spiegazione (file nella cartella lezioni/). */
+const LESSON_IMAGES = {
+  /* 'LINGUISTICA GENERALE': { 9: ['lezioni/linguistica-09.png'] } */
+};
+function lessonImages(p, n){
+  const top = p.parent ? packOf(p.parent) : p;
+  const byLesson = top && LESSON_IMAGES[top.name.trim().toUpperCase()];
+  return (byLesson && byLesson[n]) || [];
+}
 function lessonNums(p){
   const m = p.name.match(/(\d+)\s*-\s*(\d+)/); if (!m) return [];
   const a = +m[1], b = +m[2]; if (b < a || b - a > 40) return [];
   return Array.from({ length: b - a + 1 }, (_, i) => a + i);
 }
 const pretestOf = (p, n) => (p.pretest || []).find(x => x.n === n);
-function vPretest(){
-  const p = packOf(S.pid); if (!p){ S.view = 'home'; return vHome(); }
-  const parent = p.parent ? packOf(p.parent) : null;
+function vLessons(p){
   const cards = lessonNums(p).map(n => {
-    const L = pretestOf(p, n), qs = L ? L.qs : [];
+    const L = pretestOf(p, n), qs = L ? L.qs : [], imgs = lessonImages(p, n);
     const learned = qs.filter(q => q.s.b >= 3).length, pct = qs.length ? Math.round(learned / qs.length * 100) : 0;
-    return `<button class="pack" data-act="prelesson" data-arg="${n}" ${qs.length ? '' : 'disabled'}>
+    const what = [qs.length ? `${qs.length} domande · ${pct}% imparate` : 'Domande in arrivo', imgs.length ? 'spiegazione' : ''].filter(Boolean).join(' · ');
+    return `<button class="pack" data-act="lesson" data-arg="${n}">
       <span class="pack-name">Lezione ${n}</span>
       ${L && L.title ? `<span class="pack-meta">${esc(L.title)}</span>` : ''}
-      <span class="pack-kind">${qs.length ? `${qs.length} domande · ${pct}% imparate` : 'Domande in arrivo'}</span>
+      <span class="pack-kind">${what}</span>
       ${qs.length ? `<span class="bar"><span style="width:${pct}%"></span></span>` : ''}</button>`;
   }).join('');
-  return `${back('open', p.id)}<p class="crumb">${parent ? esc(parent.name) + ' · ' : ''}${esc(p.name)}</p><h2 class="title">PRIMA DEL PRETEST</h2>
-  <div class="packs">${cards || '<div class="empty">Questa parte non è divisa in lezioni.</div>'}</div>`;
+  return `<div class="packs" style="margin-top:18px">${cards}</div>`;
+}
+function vLesson(){
+  const p = packOf(S.pid); if (!p){ S.view = 'home'; return vHome(); }
+  const parent = p.parent ? packOf(p.parent) : null, n = S.lesson;
+  const L = pretestOf(p, n), qs = L ? L.qs : [], imgs = lessonImages(p, n);
+  const learned = qs.filter(q => q.s.b >= 3).length, toReview = qs.filter(q => q.s.t && q.s.b < 3 && q.s.w > 0).length, unseen = qs.filter(q => q.s.t === 0).length;
+  const tab = S.lpart === 'img' ? 'img' : 'q';
+  const body = tab === 'q'
+    ? (qs.length ? `<div class="stats" style="margin-top:18px">
+        <div><b>${qs.length}</b><span>domande</span></div><div><b>${learned}</b><span>imparate</span></div>
+        <div><b>${toReview}</b><span>da ripassare</span></div><div><b>${unseen}</b><span>mai viste</span></div></div>
+      <div class="modes"><button class="mode primary" data-act="prelesson" data-arg="${n}"><b>Inizia le domande</b><span>Tutte le ${qs.length} domande della lezione, correzione subito</span></button></div>`
+      : '<div class="empty">Le domande di questa lezione sono in arrivo.</div>')
+    : (imgs.length ? `<div class="lesson-imgs">${imgs.map((src, i) => `<button class="limg" data-act="zoom" data-arg="${esc(src)}" aria-label="Ingrandisci l’immagine ${i + 1}"><img src="${esc(src)}" alt="Spiegazione della lezione ${n}${imgs.length > 1 ? ', parte ' + (i + 1) : ''}" loading="lazy"></button>`).join('')}</div>
+      <p class="note">Tocca l’immagine per ingrandirla.</p>`
+      : '<div class="empty">La spiegazione di questa lezione è in arrivo.</div>');
+  return `${back('open', p.id)}<p class="crumb">${parent ? esc(parent.name) + ' · ' : ''}${esc(p.name)}</p><h2 class="title">Lezione ${n}</h2>
+  ${L && L.title ? `<p class="lede" style="margin:-8px 0 16px">${esc(L.title)}</p>` : ''}
+  <div class="seg tabs" role="radiogroup" aria-label="Sezione della lezione">
+    <button role="radio" aria-checked="${tab === 'q'}" data-act="lpart" data-arg="q">Domande<small>${qs.length ? qs.length + ' domande' : 'in arrivo'}</small></button>
+    <button role="radio" aria-checked="${tab === 'img'}" data-act="lpart" data-arg="img">Spiegazione<small>${imgs.length ? (imgs.length === 1 ? '1 immagine' : imgs.length + ' immagini') : 'in arrivo'}</small></button>
+  </div>${body}`;
+}
+
+function openZoom(src){
+  const z = document.createElement('div'); z.className = 'zoom'; z.setAttribute('role', 'dialog'); z.setAttribute('aria-label', 'Immagine ingrandita');
+  z.innerHTML = `<button class="zoom-x" aria-label="Chiudi">×</button><div class="zoom-in"><img src="${esc(src)}" alt=""></div>`;
+  const img = z.querySelector('img');
+  img.addEventListener('click', () => img.classList.toggle('big'));
+  const close = () => { z.remove(); document.removeEventListener('keydown', onKey); };
+  const onKey = (e) => { if (e.key === 'Escape') close(); };
+  z.querySelector('.zoom-x').addEventListener('click', close);
+  document.addEventListener('keydown', onKey);
+  document.body.appendChild(z); z.querySelector('.zoom-x').focus();
 }
 
 /* ---------- glossario ---------- */
@@ -1240,7 +1290,7 @@ function vResults(){
   ${wrong.length ? `<h3 class="sec">Da rivedere</h3><ol class="review">${wrong.map(r => { const q = itemsOf(s)[r.qi]; return `<li><p><b>${esc(q.q)}</b></p>${isMC(q)
       ? `${r.chosen != null ? `<p class="yours">La tua: ${esc(q.o[r.chosen])}</p>` : ''}<p class="ans">Giusta: <span class="hlt">${esc(q.o[q.a])}</span></p>`
       : (q.r ? `<p class="ans">${esc(q.r)}</p>` : '')}</li>`; }).join('')}</ol>` : ''}
-  <div class="row">${wrong.length ? '<button class="btn primary" data-act="redo">Ripassa questi errori</button>' : ''}${s.kind === 'pre' ? '<button class="btn ghost" data-act="pretest">Torna alle lezioni</button>' : `<button class="btn ghost" data-act="open" data-arg="${p.id}">Torna alla materia</button>`}</div>`;
+  <div class="row">${wrong.length ? '<button class="btn primary" data-act="redo">Ripassa questi errori</button>' : ''}${s.kind === 'pre' ? '<button class="btn ghost" data-act="lesson">Torna alla lezione</button>' : `<button class="btn ghost" data-act="open" data-arg="${p.id}">Torna alla materia</button>`}</div>`;
 }
 
 let lastView = '';
@@ -1254,7 +1304,7 @@ function render(){
     case 'answers': html = vAnswers(); break;
     case 'edit': html = vEdit(); break;
     case 'gadd': html = vGlossAdd(); break;
-    case 'pretest': html = vPretest(); break;
+    case 'lesson': html = vLesson(); break;
     case 'gedit': html = vGlossEdit(); break;
     case 'build': html = vBuild(); break;
     case 'pack': html = vPack(); break;
@@ -1352,7 +1402,7 @@ const H = {
     const p = packOf(id); if (p){ S.year = p.year; for (const x of familyOf(p)) removePack(x); } S.view = 'year'; render(); toast('Materia eliminata');
   },
   quiz(kind){ startQuiz(kind); },
-  quit(){ const s = S.session; if (s && s.res.length){ S.view = 'results'; } else { S.view = s && s.kind === 'pre' ? 'pretest' : 'pack'; S.session = null; } render(); },
+  quit(){ const s = S.session; if (s && s.res.length){ S.view = 'results'; } else { S.view = s && s.kind === 'pre' ? 'lesson' : 'pack'; S.session = null; } render(); },
   pick(k){
     const s = S.session, p = packOf(s.pid), qi = s.list[s.i], q = itemsOf(s)[qi];
     const orig = s.order[+k];
@@ -1402,14 +1452,16 @@ const H = {
   },
   flip(_, el){ const s = S.session; s.flipped = !s.flipped; el.classList.toggle('flipped', s.flipped); el.setAttribute('aria-pressed', String(s.flipped)); },
   /* PRIMA DEL PRETEST: serie di domande a parte di ogni lezione (p.pre), tutte, in ordine casuale, correzione subito */
-  pretest(){ S.session = null; S.view = 'pretest'; render(); },
+  lesson(n){ if (n !== undefined) S.lesson = +n; S.session = null; S.view = 'lesson'; render(); },
+  lpart(x){ S.lpart = x === 'img' ? 'img' : 'q'; render(); },
+  zoom(src){ openZoom(src); },
   prelesson(n){
     const p = packOf(S.pid), L = p && pretestOf(p, +n);
     if (!L || !L.qs.length) return toast('Le domande di questa lezione non sono ancora state inserite');
     S.session = { pid: p.id, kind: 'pre', items: L.qs, list: shuffle(L.qs.map((_, i) => i)), i: 0, res: [] };
     setupQ(); S.view = 'quiz'; render();
   },
-  part(x){ S.part = x === 'gloss' ? 'gloss' : 'quiz'; render(); },
+  part(x){ S.part = ['gloss', 'lessons'].includes(x) ? x : 'quiz'; render(); },
   gquiz(k){ startGloss(k); },
   gadd(){ S.gadd = { files: [], text: '', l: '', err: '' }; S.view = 'gadd'; render(); },
   gclear(){ syncGAdd(); S.gadd.files = []; render(); },
