@@ -1111,8 +1111,8 @@ function vLesson(){
   return `${back('open', parent ? parent.id : p.id)}<p class="crumb">${parent ? esc(parent.name) + ' · ' : ''}Lezioni</p><h2 class="title">Lezione ${n}</h2>
   ${L && L.title ? `<p class="lede" style="margin:-8px 0 16px">${esc(L.title)}</p>` : ''}
   <div class="seg tabs ${terms.length ? 'three' : ''}" role="radiogroup" aria-label="Sezione della lezione">
-    <button role="radio" aria-checked="${tab === 'q'}" data-act="lpart" data-arg="q">Domande<small>${qs.length ? qs.length + ' domande' : 'in arrivo'}</small></button>
     <button role="radio" aria-checked="${tab === 'img'}" data-act="lpart" data-arg="img">Spiegazione<small>${imgs.length ? (imgs.length === 1 ? '1 immagine' : imgs.length + ' immagini') : 'in arrivo'}</small></button>
+    <button role="radio" aria-checked="${tab === 'q'}" data-act="lpart" data-arg="q">Domande<small>${qs.length ? qs.length + ' domande' : 'in arrivo'}</small></button>
     ${terms.length ? `<button role="radio" aria-checked="${tab === 'gl'}" data-act="lpart" data-arg="gl">Glossario<small>${terms.length} termini</small></button>` : ''}
   </div>${body}`;
 }
@@ -1498,7 +1498,7 @@ const H = {
   flip(_, el){ const s = S.session; s.flipped = !s.flipped; el.classList.toggle('flipped', s.flipped); el.setAttribute('aria-pressed', String(s.flipped)); },
   /* PRIMA DEL PRETEST: serie di domande a parte di ogni lezione (p.pre), tutte, in ordine casuale, correzione subito */
   lesson(arg){
-    if (arg !== undefined){ const [pid, n] = String(arg).split(':'); if (n === undefined){ S.lesson = +pid; } else { S.lessonPid = pid; S.lesson = +n; } }
+    if (arg !== undefined){ const [pid, n] = String(arg).split(':'); if (n === undefined){ S.lesson = +pid; } else { S.lessonPid = pid; S.lesson = +n; S.lpart = 'img'; } }
     S.session = null; S.view = 'lesson'; render();
   },
   openpart(id){ H.open(id); S.part = 'quiz'; render(); },
