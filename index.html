@@ -161,6 +161,8 @@ input[type=password],input[type=search]{width:100%;font:inherit;color:var(--ink)
 .pack.year{padding:20px 20px;gap:6px}
 .pack.year .pack-name{font-size:23px;letter-spacing:.01em}
 .tabs{margin:4px 0 0}
+.donebox{margin-top:18px}
+.donebox summary{font-size:18px}
 .tabs.three{grid-template-columns:repeat(3,1fr);gap:8px}
 .tabs.three button{padding:10px 10px}
 .lesson-imgs{display:grid;gap:12px;margin-top:18px}
@@ -864,19 +866,21 @@ function unitCard(p){
 /* Materia divisa in parti: Glossario (tutti i termini), Lezioni (tutte le lezioni), Paniere (diviso per parte). */
 function vSubject(p){
   const units = unitsOf(p), g = glossOf(p), lessons = units.flatMap(u => lessonNums(u).map(n => [u, n]));
-  if (!['gloss', 'lessons', 'quiz'].includes(S.part)) S.part = 'gloss';
+  if (!['lessons', 'quiz'].includes(S.part)) S.part = 'lessons';
   const head = `${back('year', p.year)}<h2 class="title">${esc(p.name)} <button class="link mini" data-act="rename">Rinomina</button></h2>
-  <div class="seg tabs three" role="radiogroup" aria-label="Parte della materia">
-    <button role="radio" aria-checked="${S.part === 'gloss'}" data-act="part" data-arg="gloss">Glossario<small>${g.length} ${g.length === 1 ? 'termine' : 'termini'}</small></button>
+  <div class="seg tabs" role="radiogroup" aria-label="Parte della materia">
     <button role="radio" aria-checked="${S.part === 'lessons'}" data-act="part" data-arg="lessons">Lezioni<small>${lessons.length} lezioni</small></button>
     <button role="radio" aria-checked="${S.part === 'quiz'}" data-act="part" data-arg="quiz">Paniere<small>${units.length} parti</small></button>
   </div>`;
   const foot = `<label class="field" style="margin-top:24px"><span>Anno della materia</span>${yearSelect('p-year', p.year)}</label>
   <button class="danger-link" data-act="del" data-arg="${p.id}">Elimina questa materia</button>`;
   let body;
-  if (S.part === 'gloss') body = vGloss(p);
-  else if (S.part === 'lessons') body = vLessons(lessons);
-  else body = `<div class="packs" style="margin-top:18px">${units.map(u => {
+  if (S.part === 'lessons') body = vLessons(lessons);
+  else body = `<div class="modes" style="margin-top:18px">
+    <button class="mode primary" data-act="gquiz" data-arg="mc" ${g.length >= 4 ? '' : 'disabled'}><b>Quiz sui termini</b><span>${g.length >= 4 ? `Leggi la definizione e scegli il termine giusto, tra i ${g.length} termini del glossario` : 'Termini in arrivo'}</span></button>
+  </div>
+  <h3 class="sec">Paniere per parti</h3>
+  <div class="packs">${units.map(u => {
     const st = stats(u), pct = u.qs.length ? Math.round(st.learned / u.qs.length * 100) : 0;
     return `<button class="pack" data-act="open" data-arg="${u.id}">
       <span class="pack-name">${esc(u.name)}</span>
@@ -1056,26 +1060,44 @@ function lessonNums(p){
   return Array.from({ length: b - a + 1 }, (_, i) => a + i);
 }
 const pretestOf = (p, n) => (p.pretest || []).find(x => x.n === n);
+const lessonTerms = (p, n) => (p.glossary || []).filter(t => lessonNo(t) === n);
+/* Una lezione è fatta quando tutte le sue domande hanno l'ultima risposta giusta e tutti i suoi termini l'ultima volta erano «me la ricordo». */
+function lessonProgress(p, n){
+  const L = pretestOf(p, n), qs = L ? L.qs : [], terms = lessonTerms(p, n), items = qs.concat(terms);
+  const ok = items.filter(x => x.s.t && x.s.b >= 1).length;
+  return { L, qs, terms, imgs: lessonImages(p, n), total: items.length, pct: items.length ? Math.round(ok / items.length * 100) : 0, done: items.length > 0 && ok === items.length };
+}
 function vLessons(pairs){
-  const cards = pairs.map(([p, n]) => {
-    const L = pretestOf(p, n), qs = L ? L.qs : [], imgs = lessonImages(p, n);
-    const learned = qs.filter(q => q.s.b >= 3).length, pct = qs.length ? Math.round(learned / qs.length * 100) : 0;
-    const what = [qs.length ? `${qs.length} domande · ${pct}% imparate` : 'Domande in arrivo', imgs.length ? 'spiegazione' : ''].filter(Boolean).join(' · ');
+  const card = ([p, n]) => {
+    const { L, qs, terms, imgs, total, pct, done } = lessonProgress(p, n);
+    const what = [qs.length ? `${qs.length} domande` : 'Domande in arrivo', terms.length ? `${terms.length} termini` : '', imgs.length ? 'spiegazione' : '', total ? (done ? 'completata' : `${pct}% completata`) : ''].filter(Boolean).join(' · ');
     return `<button class="pack" data-act="lesson" data-arg="${p.id}:${n}">
       <span class="pack-name">Lezione ${n}</span>
       ${L && L.title ? `<span class="pack-meta">${esc(L.title)}</span>` : ''}
       <span class="pack-kind">${what}</span>
-      ${qs.length ? `<span class="bar"><span style="width:${pct}%"></span></span>` : ''}</button>`;
-  }).join('');
-  return `<div class="packs" style="margin-top:18px">${cards}</div>`;
+      ${total ? `<span class="bar"><span style="width:${pct}%"></span></span>` : ''}</button>`;
+  };
+  const todo = pairs.filter(([p, n]) => !lessonProgress(p, n).done), done = pairs.filter(([p, n]) => lessonProgress(p, n).done);
+  return `${done.length ? `<details class="qlist donebox" data-key="done" ${S.open.has('done') ? 'open' : ''}><summary>Lezioni fatte (${done.length})</summary>
+    <p class="note" style="margin-top:0">Tocca una lezione per rivederla e rifare i test.</p>
+    <div class="packs" style="margin-bottom:16px">${done.map(card).join('')}</div></details>` : ''}
+  <div class="packs" style="margin-top:18px">${todo.map(card).join('') || '<div class="empty">Hai completato tutte le lezioni disponibili.</div>'}</div>`;
 }
 function vLesson(){
   const p = packOf(S.lessonPid || S.pid); if (!p){ S.view = 'home'; return vHome(); }
   const parent = p.parent ? packOf(p.parent) : null, n = S.lesson;
-  const L = pretestOf(p, n), qs = L ? L.qs : [], imgs = lessonImages(p, n);
+  const L = pretestOf(p, n), qs = L ? L.qs : [], imgs = lessonImages(p, n), terms = lessonTerms(p, n);
   const learned = qs.filter(q => q.s.b >= 3).length, toReview = qs.filter(q => q.s.t && q.s.b < 3 && q.s.w > 0).length, unseen = qs.filter(q => q.s.t === 0).length;
-  const tab = S.lpart === 'img' ? 'img' : 'q';
-  const body = tab === 'q'
+  const tab = S.lpart === 'img' ? 'img' : (S.lpart === 'gl' && terms.length ? 'gl' : 'q');
+  const gs = glossStats(terms), gErr = terms.filter(t => t.s.w > 0 && t.s.b < 3).length;
+  const body = tab === 'gl' ? `<div class="stats" style="margin-top:18px">
+        <div><b>${terms.length}</b><span>termini</span></div><div><b>${gs.learned}</b><span>imparati</span></div>
+        <div><b>${gs.toReview}</b><span>da ripassare</span></div><div><b>${gs.unseen}</b><span>mai visti</span></div></div>
+      <div class="modes">
+        <button class="mode primary" data-act="lgloss" data-arg="cards"><b>Schede</b><span>Davanti il termine: tocca la scheda per girarla e trovare la definizione</span></button>
+        <button class="mode" data-act="lgloss" data-arg="errors" ${gErr ? '' : 'disabled'}><b>Solo errori</b><span>${gErr ? gErr + (gErr === 1 ? ' termine' : ' termini') + ' da ripassare' : 'Nessun errore da ripassare'}</span></button>
+      </div>`
+    : tab === 'q'
     ? (qs.length ? `<div class="stats" style="margin-top:18px">
         <div><b>${qs.length}</b><span>domande</span></div><div><b>${learned}</b><span>imparate</span></div>
         <div><b>${toReview}</b><span>da ripassare</span></div><div><b>${unseen}</b><span>mai viste</span></div></div>
@@ -1086,9 +1108,10 @@ function vLesson(){
       : '<div class="empty">La spiegazione di questa lezione è in arrivo.</div>');
   return `${back('open', parent ? parent.id : p.id)}<p class="crumb">${parent ? esc(parent.name) + ' · ' : ''}Lezioni</p><h2 class="title">Lezione ${n}</h2>
   ${L && L.title ? `<p class="lede" style="margin:-8px 0 16px">${esc(L.title)}</p>` : ''}
-  <div class="seg tabs" role="radiogroup" aria-label="Sezione della lezione">
+  <div class="seg tabs ${terms.length ? 'three' : ''}" role="radiogroup" aria-label="Sezione della lezione">
     <button role="radio" aria-checked="${tab === 'q'}" data-act="lpart" data-arg="q">Domande<small>${qs.length ? qs.length + ' domande' : 'in arrivo'}</small></button>
     <button role="radio" aria-checked="${tab === 'img'}" data-act="lpart" data-arg="img">Spiegazione<small>${imgs.length ? (imgs.length === 1 ? '1 immagine' : imgs.length + ' immagini') : 'in arrivo'}</small></button>
+    ${terms.length ? `<button role="radio" aria-checked="${tab === 'gl'}" data-act="lpart" data-arg="gl">Glossario<small>${terms.length} termini</small></button>` : ''}
   </div>${body}`;
 }
 
@@ -1139,9 +1162,9 @@ function vGloss(p){
 const lessonNo = (t) => { const m = lessonOf(t).match(/lezione\s*(\d+)/i); return m ? +m[1] : Infinity; };
 /* indici dei termini nell'ordine dei PDF (ordinamento stabile: a parità di lezione resta l'ordine di inserimento) */
 const pdfOrder = (g, idx) => [...idx].sort((a, b) => lessonNo(g[a]) - lessonNo(g[b]) || a - b);
-function startGloss(kind){
-  const p = packOf(S.pid), g = glossOf(p);
-  let idx = g.map((_, i) => i).filter(i => !S.gles || lessonOf(g[i]) === S.gles);
+function startGloss(kind, pool, pid, skind){
+  const p = packOf(S.pid), g = pool || glossOf(p);
+  let idx = g.map((_, i) => i).filter(i => pool || !S.gles || lessonOf(g[i]) === S.gles);
   /* Schede e Solo errori seguono sempre l'ordine dei PDF: lezioni in ordine numerico, termini come compaiono nel PDF. */
   if (kind === 'cards' || kind === 'errors'){ idx = pdfOrder(g, idx); if (kind === 'errors') idx = idx.filter(i => g[i].s.w > 0 && g[i].s.b < 3); }
   else idx = idx.map(i => { const s = g[i].s; const w = s.t === 0 ? 3 : (5 - Math.min(s.b, 4)) + (s.w > s.c ? 2 : 0); return [i, Math.pow(Math.random(), 1 / w)]; })
@@ -1155,7 +1178,7 @@ function startGloss(kind){
     }
     return { q: t.t, o: [], a: null, m: true, x: '', r: t.d, s: t.s, card: true };
   });
-  S.session = { pid: p.id, kind: 'gloss', items, list: items.map((_, i) => i), i: 0, res: [] };
+  S.session = { pid: pid || p.id, kind: skind || 'gloss', items, list: items.map((_, i) => i), i: 0, res: [] };
   setupQ(); S.view = 'quiz'; render();
 }
 
@@ -1310,7 +1333,7 @@ function vResults(){
   ${wrong.length ? `<h3 class="sec">Da rivedere</h3><ol class="review">${wrong.map(r => { const q = itemsOf(s)[r.qi]; return `<li><p><b>${esc(q.q)}</b></p>${isMC(q)
       ? `${r.chosen != null ? `<p class="yours">La tua: ${esc(q.o[r.chosen])}</p>` : ''}<p class="ans">Giusta: <span class="hlt">${esc(q.o[q.a])}</span></p>`
       : (q.r ? `<p class="ans">${esc(q.r)}</p>` : '')}</li>`; }).join('')}</ol>` : ''}
-  <div class="row">${wrong.length ? '<button class="btn primary" data-act="redo">Ripassa questi errori</button>' : ''}${s.kind === 'pre' ? '<button class="btn ghost" data-act="lesson">Torna alla lezione</button>' : `<button class="btn ghost" data-act="open" data-arg="${p.id}">Torna alla materia</button>`}</div>`;
+  <div class="row">${wrong.length ? '<button class="btn primary" data-act="redo">Ripassa questi errori</button>' : ''}${['pre', 'lgloss'].includes(s.kind) ? '<button class="btn ghost" data-act="lesson">Torna alla lezione</button>' : `<button class="btn ghost" data-act="open" data-arg="${p.id}">Torna alla materia</button>`}</div>`;
 }
 
 let lastView = '';
@@ -1344,7 +1367,7 @@ const H = {
   add(){ const f = S.add; S.add = blankAdd({ year: S.year, kind: f.kind, reader: f.reader, n: f.n, qtype: f.qtype }); S.view = 'add'; render(); },
   addto(){ const f = S.add; S.add = blankAdd({ kind: f.kind, reader: f.reader, n: f.n, qtype: f.qtype, target: S.pid }); S.view = 'add'; render(); },
   open(id){
-    if (id !== S.pid){ const p = packOf(id); S.part = p && (isContainer(p) || (p.glossary || []).length) ? 'gloss' : 'quiz'; S.gles = ''; }
+    if (id !== S.pid){ const p = packOf(id); S.part = p && isContainer(p) ? 'lessons' : (p && (p.glossary || []).length ? 'gloss' : 'quiz'); S.gles = ''; }
     S.pid = id; S.session = null; S.edit = null; S.ans = null; S.gadd = null; S.gedit = null; S.view = 'pack'; render();
   },
   kind(k){ syncAdd(); S.add.kind = k; S.add.err = ''; render(); },
@@ -1422,7 +1445,7 @@ const H = {
     const p = packOf(id); if (p){ S.year = p.year; for (const x of familyOf(p)) removePack(x); } S.view = 'year'; render(); toast('Materia eliminata');
   },
   quiz(kind){ startQuiz(kind); },
-  quit(){ const s = S.session; if (s && s.res.length){ S.view = 'results'; } else { S.view = s && s.kind === 'pre' ? 'lesson' : 'pack'; S.session = null; } render(); },
+  quit(){ const s = S.session; if (s && s.res.length){ S.view = 'results'; } else { S.view = s && ['pre', 'lgloss'].includes(s.kind) ? 'lesson' : 'pack'; S.session = null; } render(); },
   pick(k){
     const s = S.session, p = packOf(s.pid), qi = s.list[s.i], q = itemsOf(s)[qi];
     const orig = s.order[+k];
@@ -1477,7 +1500,8 @@ const H = {
     S.session = null; S.view = 'lesson'; render();
   },
   openpart(id){ H.open(id); S.part = 'quiz'; render(); },
-  lpart(x){ S.lpart = x === 'img' ? 'img' : 'q'; render(); },
+  lpart(x){ S.lpart = ['img', 'gl'].includes(x) ? x : 'q'; render(); },
+  lgloss(kind){ const p = packOf(S.lessonPid || S.pid); startGloss(kind, lessonTerms(p, S.lesson), p.id, 'lgloss'); },
   zoom(src){ openZoom(src); },
   prelesson(n){
     const p = packOf(S.lessonPid || S.pid), L = p && pretestOf(p, +n);
