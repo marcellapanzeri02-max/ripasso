@@ -1047,7 +1047,9 @@ function vPack(){
 /* Le lezioni di una parte si ricavano dal nome (es. «Lezione 1-8» → 1…8). Per ognuna p.pretest può avere una serie di domande
    e LESSON_IMAGES le immagini della spiegazione (file nella cartella lezioni/). */
 const LESSON_IMAGES = {
-  /* 'LINGUISTICA GENERALE': { 9: ['lezioni/linguistica-09.png'] } */
+  'LINGUISTICA GENERALE': {
+    2: ['lezioni/linguistica-02-1.jpg', 'lezioni/linguistica-02-2.jpg', 'lezioni/linguistica-02-3.jpg', 'lezioni/linguistica-02-4.webp']
+  }
 };
 function lessonImages(p, n){
   const top = p.parent ? packOf(p.parent) : p;
