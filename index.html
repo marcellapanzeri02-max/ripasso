@@ -815,7 +815,7 @@ function record(ok, chosen){
   s.prev = { ...q.s }; s.ok = ok; s.chosen = chosen;
   if (ok !== null) applyStat(q, ok);
   s.res.push({ qi, ok, chosen });
-  saveQ(p);
+  for (const x of (isContainer(p) ? familyOf(p) : [p])) saveQ(x);
 }
 function nextQ(){
   const s = S.session; s.i++;
@@ -861,11 +861,29 @@ function unitCard(p){
       <span class="pack-meta">${meta}</span>
       <span class="bar"><span style="width:${pct}%"></span></span></button>`;
 }
+/* Materia divisa in parti: Glossario (tutti i termini), Lezioni (tutte le lezioni), Paniere (diviso per parte). */
 function vSubject(p){
-  return `${back('year', p.year)}<h2 class="title">${esc(p.name)} <button class="link mini" data-act="rename">Rinomina</button></h2>
-  <div class="packs">${unitsOf(p).map(u => unitCard(u)).join('')}</div>
-  <label class="field" style="margin-top:24px"><span>Anno della materia</span>${yearSelect('p-year', p.year)}</label>
+  const units = unitsOf(p), g = glossOf(p), lessons = units.flatMap(u => lessonNums(u).map(n => [u, n]));
+  if (!['gloss', 'lessons', 'quiz'].includes(S.part)) S.part = 'gloss';
+  const head = `${back('year', p.year)}<h2 class="title">${esc(p.name)} <button class="link mini" data-act="rename">Rinomina</button></h2>
+  <div class="seg tabs three" role="radiogroup" aria-label="Parte della materia">
+    <button role="radio" aria-checked="${S.part === 'gloss'}" data-act="part" data-arg="gloss">Glossario<small>${g.length} ${g.length === 1 ? 'termine' : 'termini'}</small></button>
+    <button role="radio" aria-checked="${S.part === 'lessons'}" data-act="part" data-arg="lessons">Lezioni<small>${lessons.length} lezioni</small></button>
+    <button role="radio" aria-checked="${S.part === 'quiz'}" data-act="part" data-arg="quiz">Paniere<small>${units.length} parti</small></button>
+  </div>`;
+  const foot = `<label class="field" style="margin-top:24px"><span>Anno della materia</span>${yearSelect('p-year', p.year)}</label>
   <button class="danger-link" data-act="del" data-arg="${p.id}">Elimina questa materia</button>`;
+  let body;
+  if (S.part === 'gloss') body = vGloss(p);
+  else if (S.part === 'lessons') body = vLessons(lessons);
+  else body = `<div class="packs" style="margin-top:18px">${units.map(u => {
+    const st = stats(u), pct = u.qs.length ? Math.round(st.learned / u.qs.length * 100) : 0;
+    return `<button class="pack" data-act="open" data-arg="${u.id}">
+      <span class="pack-name">${esc(u.name)}</span>
+      <span class="pack-kind">${u.qs.length ? `${u.qs.length} domande · ${pct}% imparate` : 'Domande in arrivo'}</span>
+      ${u.qs.length ? `<span class="bar"><span style="width:${pct}%"></span></span>` : ''}</button>`;
+  }).join('')}</div>`;
+  return head + body + foot;
 }
 
 function vYear(){
@@ -986,9 +1004,10 @@ function vPack(){
   const est = p.qs.filter(q => isMC(q) && q.a !== null && !q.m).length;
   const missing = p.qs.filter(q => isMC(q) && q.a === null).length;
   const sel = (id, opts, cur) => `<select id="${id}">${opts.map(([v, l]) => `<option value="${esc(v)}" ${String(v) === String(cur) ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>`;
-  const g = p.glossary || [], nums = lessonNums(p);
+  const g = p.glossary || [], nums = parent ? [] : lessonNums(p);
+  if (parent) S.part = 'quiz';
   if (S.part === 'lessons' && !nums.length) S.part = 'quiz';
-  const head = `${parent ? back('open', parent.id) + `<p class="crumb">${esc(parent.name)}</p>` : back('year', p.year)}<h2 class="title">${esc(p.name)} <button class="link mini" data-act="rename">Rinomina</button></h2>
+  const head = parent ? `<button class="back" data-act="openpart" data-arg="${parent.id}">Indietro</button><p class="crumb">${esc(parent.name)} · Paniere</p><h2 class="title">${esc(p.name)}</h2>` : `${back('year', p.year)}<h2 class="title">${esc(p.name)} <button class="link mini" data-act="rename">Rinomina</button></h2>
   <div class="seg tabs ${nums.length ? 'three' : ''}" role="radiogroup" aria-label="Parte della materia">
     <button role="radio" aria-checked="${S.part === 'gloss'}" data-act="part" data-arg="gloss">Glossario<small>${g.length} ${g.length === 1 ? 'termine' : 'termini'}</small></button>
     <button role="radio" aria-checked="${S.part === 'quiz'}" data-act="part" data-arg="quiz">Paniere<small>${p.qs.length} ${p.qs.length === 1 ? 'domanda' : 'domande'}</small></button>
@@ -997,7 +1016,7 @@ function vPack(){
   const foot = parent ? '' : `<label class="field" style="margin-top:24px"><span>Anno della materia</span>${yearSelect('p-year', p.year)}</label>
   <button class="danger-link" data-act="del" data-arg="${p.id}">Elimina questa materia</button>`;
   if (S.part === 'gloss') return head + vGloss(p) + foot;
-  if (S.part === 'lessons') return head + vLessons(p) + foot;
+  if (S.part === 'lessons') return head + vLessons(nums.map(n => [p, n])) + foot;
   /* parte di una materia con il paniere ancora vuoto: stessi pulsanti, spenti finché non arrivano le domande */
   if (!p.qs.length && parent) return `${head}
   <div class="modes" style="margin-top:18px">
@@ -1037,12 +1056,12 @@ function lessonNums(p){
   return Array.from({ length: b - a + 1 }, (_, i) => a + i);
 }
 const pretestOf = (p, n) => (p.pretest || []).find(x => x.n === n);
-function vLessons(p){
-  const cards = lessonNums(p).map(n => {
+function vLessons(pairs){
+  const cards = pairs.map(([p, n]) => {
     const L = pretestOf(p, n), qs = L ? L.qs : [], imgs = lessonImages(p, n);
     const learned = qs.filter(q => q.s.b >= 3).length, pct = qs.length ? Math.round(learned / qs.length * 100) : 0;
     const what = [qs.length ? `${qs.length} domande · ${pct}% imparate` : 'Domande in arrivo', imgs.length ? 'spiegazione' : ''].filter(Boolean).join(' · ');
-    return `<button class="pack" data-act="lesson" data-arg="${n}">
+    return `<button class="pack" data-act="lesson" data-arg="${p.id}:${n}">
       <span class="pack-name">Lezione ${n}</span>
       ${L && L.title ? `<span class="pack-meta">${esc(L.title)}</span>` : ''}
       <span class="pack-kind">${what}</span>
@@ -1051,7 +1070,7 @@ function vLessons(p){
   return `<div class="packs" style="margin-top:18px">${cards}</div>`;
 }
 function vLesson(){
-  const p = packOf(S.pid); if (!p){ S.view = 'home'; return vHome(); }
+  const p = packOf(S.lessonPid || S.pid); if (!p){ S.view = 'home'; return vHome(); }
   const parent = p.parent ? packOf(p.parent) : null, n = S.lesson;
   const L = pretestOf(p, n), qs = L ? L.qs : [], imgs = lessonImages(p, n);
   const learned = qs.filter(q => q.s.b >= 3).length, toReview = qs.filter(q => q.s.t && q.s.b < 3 && q.s.w > 0).length, unseen = qs.filter(q => q.s.t === 0).length;
@@ -1065,7 +1084,7 @@ function vLesson(){
     : (imgs.length ? `<div class="lesson-imgs">${imgs.map((src, i) => `<button class="limg" data-act="zoom" data-arg="${esc(src)}" aria-label="Ingrandisci l’immagine ${i + 1}"><img src="${esc(src)}" alt="Spiegazione della lezione ${n}${imgs.length > 1 ? ', parte ' + (i + 1) : ''}" loading="lazy"></button>`).join('')}</div>
       <p class="note">Tocca l’immagine per ingrandirla.</p>`
       : '<div class="empty">La spiegazione di questa lezione è in arrivo.</div>');
-  return `${back('open', p.id)}<p class="crumb">${parent ? esc(parent.name) + ' · ' : ''}${esc(p.name)}</p><h2 class="title">Lezione ${n}</h2>
+  return `${back('open', parent ? parent.id : p.id)}<p class="crumb">${parent ? esc(parent.name) + ' · ' : ''}Lezioni</p><h2 class="title">Lezione ${n}</h2>
   ${L && L.title ? `<p class="lede" style="margin:-8px 0 16px">${esc(L.title)}</p>` : ''}
   <div class="seg tabs" role="radiogroup" aria-label="Sezione della lezione">
     <button role="radio" aria-checked="${tab === 'q'}" data-act="lpart" data-arg="q">Domande<small>${qs.length ? qs.length + ' domande' : 'in arrivo'}</small></button>
@@ -1092,8 +1111,9 @@ function glossStats(g){
   for (const t of g){ if (t.s.t === 0) unseen++; else if (t.s.b >= 3) learned++; else if (t.s.w > 0) toReview++; }
   return { learned, toReview, unseen };
 }
+const glossOf = (p) => isContainer(p) ? unitsOf(p).flatMap(u => u.glossary || []) : (p.glossary || []);
 function vGloss(p){
-  const g = p.glossary || [];
+  const g = glossOf(p);
   const addRow = `<div class="row"><button class="btn ${g.length ? 'ghost' : 'primary'}" data-act="gadd">Aggiungi termini da un PDF</button><button class="btn ghost" data-act="gedit" data-arg="-1">Scrivi un termine</button></div>`;
   if (!g.length) return `<div class="empty">Il glossario è vuoto.<br>Aggiungi i termini dal PDF di una lezione o scrivili a mano.</div>${addRow}`;
   const st = glossStats(g), lessons = [...new Set(g.map(lessonOf))];
@@ -1120,7 +1140,7 @@ const lessonNo = (t) => { const m = lessonOf(t).match(/lezione\s*(\d+)/i); retur
 /* indici dei termini nell'ordine dei PDF (ordinamento stabile: a parità di lezione resta l'ordine di inserimento) */
 const pdfOrder = (g, idx) => [...idx].sort((a, b) => lessonNo(g[a]) - lessonNo(g[b]) || a - b);
 function startGloss(kind){
-  const p = packOf(S.pid), g = p.glossary || [];
+  const p = packOf(S.pid), g = glossOf(p);
   let idx = g.map((_, i) => i).filter(i => !S.gles || lessonOf(g[i]) === S.gles);
   /* Schede e Solo errori seguono sempre l'ordine dei PDF: lezioni in ordine numerico, termini come compaiono nel PDF. */
   if (kind === 'cards' || kind === 'errors'){ idx = pdfOrder(g, idx); if (kind === 'errors') idx = idx.filter(i => g[i].s.w > 0 && g[i].s.b < 3); }
@@ -1324,7 +1344,7 @@ const H = {
   add(){ const f = S.add; S.add = blankAdd({ year: S.year, kind: f.kind, reader: f.reader, n: f.n, qtype: f.qtype }); S.view = 'add'; render(); },
   addto(){ const f = S.add; S.add = blankAdd({ kind: f.kind, reader: f.reader, n: f.n, qtype: f.qtype, target: S.pid }); S.view = 'add'; render(); },
   open(id){
-    if (id !== S.pid){ const p = packOf(id); S.part = p && (p.glossary || []).length ? 'gloss' : 'quiz'; S.gles = ''; }
+    if (id !== S.pid){ const p = packOf(id); S.part = p && (isContainer(p) || (p.glossary || []).length) ? 'gloss' : 'quiz'; S.gles = ''; }
     S.pid = id; S.session = null; S.edit = null; S.ans = null; S.gadd = null; S.gedit = null; S.view = 'pack'; render();
   },
   kind(k){ syncAdd(); S.add.kind = k; S.add.err = ''; render(); },
@@ -1452,11 +1472,15 @@ const H = {
   },
   flip(_, el){ const s = S.session; s.flipped = !s.flipped; el.classList.toggle('flipped', s.flipped); el.setAttribute('aria-pressed', String(s.flipped)); },
   /* PRIMA DEL PRETEST: serie di domande a parte di ogni lezione (p.pre), tutte, in ordine casuale, correzione subito */
-  lesson(n){ if (n !== undefined) S.lesson = +n; S.session = null; S.view = 'lesson'; render(); },
+  lesson(arg){
+    if (arg !== undefined){ const [pid, n] = String(arg).split(':'); if (n === undefined){ S.lesson = +pid; } else { S.lessonPid = pid; S.lesson = +n; } }
+    S.session = null; S.view = 'lesson'; render();
+  },
+  openpart(id){ H.open(id); S.part = 'quiz'; render(); },
   lpart(x){ S.lpart = x === 'img' ? 'img' : 'q'; render(); },
   zoom(src){ openZoom(src); },
   prelesson(n){
-    const p = packOf(S.pid), L = p && pretestOf(p, +n);
+    const p = packOf(S.lessonPid || S.pid), L = p && pretestOf(p, +n);
     if (!L || !L.qs.length) return toast('Le domande di questa lezione non sono ancora state inserite');
     S.session = { pid: p.id, kind: 'pre', items: L.qs, list: shuffle(L.qs.map((_, i) => i)), i: 0, res: [] };
     setupQ(); S.view = 'quiz'; render();
