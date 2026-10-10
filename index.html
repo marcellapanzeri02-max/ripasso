@@ -214,7 +214,7 @@ let sample = null, apiKey = '', mode = 'memory', installEvt = null;
 const YEARS = ['ESAMI PRIMO ANNO', 'ESAMI SECONDO ANNO', 'ESAMI TERZO ANNO'];
 const blankAdd = (o = {}) => ({ name: '', year: 1, kind: 'paniere', reader: 'ai', files: [], text: '', ansFiles: [], ansText: '', n: 20, qtype: 'miste', target: null, err: '', ...o });
 const S = { view: 'loading', packs: [], year: 1, pid: null, session: null, build: null, add: blankAdd(), ans: null, edit: null, part: 'quiz', gles: '', gadd: null, gedit: null,
-  custom: { src: '', n: 20, type: '', check: 'now' }, open: new Set(), keyMsg: '' };
+  custom: { src: '', n: 20, type: '', check: 'now' }, open: new Set(['todo']), keyMsg: '' };
 
 const FORMAT = `1. Qual è la capitale d'Italia?
 A) Milano
@@ -864,6 +864,21 @@ function unitCard(p){
       <span class="bar"><span style="width:${pct}%"></span></span></button>`;
 }
 /* Materia divisa in parti: Glossario (tutti i termini), Lezioni (tutte le lezioni), Paniere (diviso per parte). */
+/* Quiz su tutte le lezioni studiate (= le lezioni fatte): le loro domande e, se hanno termini, un quesito per termine. */
+function reviewItems(p){
+  const items = []; let lessons = 0;
+  for (const u of unitsOf(p)) for (const n of lessonNums(u)){
+    const pr = lessonProgress(u, n); if (!pr.done) continue;
+    lessons++;
+    items.push(...pr.qs);
+    for (const t of pr.terms){
+      const pool = pr.terms.length >= 4 ? pr.terms : glossOf(p);
+      const o = shuffle([t.t, ...shuffle(pool.filter(x => x !== t && x.t !== t.t).map(x => x.t)).slice(0, 3)]);
+      if (o.length >= 2) items.push({ q: t.d, hint: 'Quale termine corrisponde a questa definizione?', o, a: o.indexOf(t.t), m: true, x: '', r: '', s: t.s });
+    }
+  }
+  return { items, lessons };
+}
 function vSubject(p){
   const units = unitsOf(p), g = glossOf(p), lessons = units.flatMap(u => lessonNums(u).map(n => [u, n]));
   if (!['lessons', 'quiz'].includes(S.part)) S.part = 'lessons';
@@ -872,7 +887,10 @@ function vSubject(p){
     <button role="radio" aria-checked="${S.part === 'lessons'}" data-act="part" data-arg="lessons">Lezioni<small>${lessons.length} lezioni</small></button>
     <button role="radio" aria-checked="${S.part === 'quiz'}" data-act="part" data-arg="quiz">Paniere<small>${units.length} parti</small></button>
   </div>`;
-  const foot = `<label class="field" style="margin-top:24px"><span>Anno della materia</span>${yearSelect('p-year', p.year)}</label>
+  const rev = reviewItems(p);
+  const foot = `<div class="modes" style="margin-top:26px">
+    <button class="mode primary" data-act="review" ${rev.items.length ? '' : 'disabled'}><b>Quiz su tutte le lezioni studiate</b><span>${rev.items.length ? `${rev.items.length} domande dalle ${rev.lessons} lezioni fatte, in ordine casuale` : 'Completa almeno una lezione per sbloccarlo'}</span></button>
+  </div>
   <button class="danger-link" data-act="del" data-arg="${p.id}">Elimina questa materia</button>`;
   let body;
   if (S.part === 'lessons') body = vLessons(lessons);
@@ -1092,10 +1110,11 @@ function vLessons(pairs){
       ${total ? `<span class="bar"><span style="width:${pct}%"></span></span>` : ''}</button>`;
   };
   const todo = pairs.filter(([p, n]) => !lessonProgress(p, n).done), done = pairs.filter(([p, n]) => lessonProgress(p, n).done);
-  return `${done.length ? `<details class="qlist donebox" data-key="done" ${S.open.has('done') ? 'open' : ''}><summary>Lezioni fatte (${done.length})</summary>
-    <p class="note" style="margin-top:0">Tocca una lezione per rivederla e rifare i test.</p>
-    <div class="packs" style="margin-bottom:16px">${done.map(card).join('')}</div></details>` : ''}
-  <div class="packs" style="margin-top:18px">${todo.map(card).join('') || '<div class="empty">Hai completato tutte le lezioni disponibili.</div>'}</div>`;
+  return `<details class="qlist donebox" data-key="done" ${S.open.has('done') ? 'open' : ''}><summary>Lezioni fatte (${done.length})</summary>
+    ${done.length ? `<p class="note" style="margin-top:0">Tocca una lezione per rivederla e rifare i test.</p>
+    <div class="packs" style="margin-bottom:16px">${done.map(card).join('')}</div>` : '<p class="note" style="margin-top:0">Qui finiscono le lezioni completate al 100%.</p>'}</details>
+  <details class="qlist donebox" data-key="todo" ${S.open.has('todo') ? 'open' : ''}><summary>Lezioni da fare (${todo.length})</summary>
+    ${todo.length ? `<div class="packs" style="margin-bottom:16px">${todo.map(card).join('')}</div>` : '<p class="note" style="margin-top:0">Hai completato tutte le lezioni disponibili.</p>'}</details>`;
 }
 function vLesson(){
   const p = packOf(S.lessonPid || S.pid); if (!p){ S.view = 'home'; return vHome(); }
@@ -1530,6 +1549,12 @@ const H = {
     const p = packOf(S.lessonPid || S.pid), L = p && pretestOf(p, +n);
     if (!L || !L.qs.length) return toast('Le domande di questa lezione non sono ancora state inserite');
     S.session = { pid: p.id, kind: 'pre', items: L.qs, list: shuffle(L.qs.map((_, i) => i)), i: 0, res: [] };
+    setupQ(); S.view = 'quiz'; render();
+  },
+  review(){
+    const p = packOf(S.pid), { items } = reviewItems(p);
+    if (!items.length) return toast('Completa almeno una lezione per sbloccare questo quiz');
+    S.session = { pid: p.id, kind: 'review', items, list: shuffle(items.map((_, i) => i)), i: 0, res: [] };
     setupQ(); S.view = 'quiz'; render();
   },
   part(x){ S.part = ['gloss', 'lessons'].includes(x) ? x : 'quiz'; render(); },

@@ -1,6 +1,6 @@
 // Service worker di Ripasso: tiene l'app disponibile anche offline.
 // Quando modifichi index.html, aumenta il numero di versione qui sotto.
-const VERSION = 'ripasso-v36';
+const VERSION = 'ripasso-v37';
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png', './icons/icon-maskable-512.png', './icons/apple-touch-icon.png'];
 const CDN = [
   'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js',
