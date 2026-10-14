@@ -161,6 +161,8 @@ input[type=password],input[type=search]{width:100%;font:inherit;color:var(--ink)
 .pack.year{padding:20px 20px;gap:6px}
 .pack.year .pack-name{font-size:23px;letter-spacing:.01em}
 .tabs{margin:4px 0 0}
+.timer{font-variant-numeric:tabular-nums;color:var(--ink)}
+.timer.low{color:var(--bad)}
 .donebox{margin-top:18px}
 .donebox summary{font-size:18px}
 .tabs.three{grid-template-columns:repeat(3,1fr);gap:8px}
@@ -821,7 +823,7 @@ function record(ok, chosen){
 }
 function nextQ(){
   const s = S.session; s.i++;
-  if (s.i >= s.list.length){ S.view = 'results'; render(); window.scrollTo(0, 0); return; }
+  if (s.i >= s.list.length){ s.endedAt = Date.now(); S.view = 'results'; render(); window.scrollTo(0, 0); return; }
   setupQ(); render(); window.scrollTo(0, 0);
 }
 
@@ -879,6 +881,10 @@ function reviewItems(p){
   }
   return { items, lessons };
 }
+/* Prova d'esame: EXAM_N domande a scelta multipla prese a caso da tutti i panieri della materia, EXAM_MIN minuti. */
+const EXAM_N = 24, EXAM_MIN = 30;
+const paniereItems = (p) => (isContainer(p) ? unitsOf(p) : [p]).flatMap(u => u.qs).filter(q => isMC(q) && q.a !== null);
+const clock = (ms) => { const t = Math.max(0, Math.ceil(ms / 1000)); return Math.floor(t / 60) + ':' + String(t % 60).padStart(2, '0'); };
 function vSubject(p){
   const units = unitsOf(p), g = glossOf(p), lessons = units.flatMap(u => lessonNums(u).map(n => [u, n]));
   if (!['lessons', 'quiz'].includes(S.part)) S.part = 'lessons';
@@ -895,7 +901,8 @@ function vSubject(p){
   let body;
   if (S.part === 'lessons') body = vLessons(lessons);
   else body = `<div class="modes" style="margin-top:18px">
-    <button class="mode primary" data-act="gquiz" data-arg="mc" ${g.length >= 4 ? '' : 'disabled'}><b>Quiz sui termini</b><span>${g.length >= 4 ? `Leggi la definizione e scegli il termine giusto, tra i ${g.length} termini del glossario` : 'Termini in arrivo'}</span></button>
+    ${(() => { const n = paniereItems(p).length; return `<button class="mode primary" data-act="examall" ${n ? '' : 'disabled'}><b>Domande da paniere</b><span>${n ? `${Math.min(EXAM_N, n)} domande miste da tutti i panieri caricati (${n} in tutto), ${EXAM_MIN} minuti di tempo, correzione alla fine` : 'Domande in arrivo'}</span></button>`; })()}
+    <button class="mode" data-act="gquiz" data-arg="mc" ${g.length >= 4 ? '' : 'disabled'}><b>Quiz sui termini</b><span>${g.length >= 4 ? `Leggi la definizione e scegli il termine giusto, tra i ${g.length} termini del glossario` : 'Termini in arrivo'}</span></button>
   </div>
   <h3 class="sec">Paniere per parti</h3>
   <div class="packs">${units.map(u => {
@@ -1304,7 +1311,7 @@ function vGlossEdit(){
 function vQuiz(){
   const s = S.session, p = packOf(s.pid), q = itemsOf(s)[s.list[s.i]];
   const exam = s.kind === 'exam';
-  const top = `<div class="qtop"><button class="link" data-act="quit">Esci</button><span>${s.i + 1} di ${s.list.length}</span></div>
+  const top = `<div class="qtop"><button class="link" data-act="quit">Esci</button>${s.deadline ? `<span class="timer" id="timer" aria-label="Tempo rimasto">⏱ ${clock(s.deadline - Date.now())}</span>` : ''}<span>${s.i + 1} di ${s.list.length}</span></div>
     <div class="bar thin"><span style="width:${(s.i / s.list.length) * 100}%"></span></div>`;
   if (q.card) return `${top}
     <button class="flip ${s.flipped ? 'flipped' : ''}" data-act="flip" aria-label="Gira la flashcard" aria-pressed="${!!s.flipped}">
@@ -1364,8 +1371,21 @@ function vQuiz(){
   return `${top}<article class="qcard">${q.hint ? `<p class="note" style="margin:0 0 8px">${esc(q.hint)}</p>` : ''}<p class="q">${esc(q.q)}</p>${body}</article>`;
 }
 
+function vExamResults(s, p){
+  const right = s.res.filter(r => r.ok).length, done = s.res.length, total = s.list.length, skipped = total - done;
+  const wrong = s.res.filter(r => r.ok === false);
+  const used = Math.min(EXAM_MIN * 60000, (s.endedAt || Date.now()) - (s.deadline - EXAM_MIN * 60000));
+  const pct = right / total;
+  const msg = (s.timeUp ? 'Tempo scaduto. ' : '') + (pct >= 0.9 ? 'Ottimo risultato: l’esame è alla tua portata.' : pct >= 0.6 ? 'Buona base: ripassa gli errori qui sotto.' : 'C’è ancora da lavorare: ripassa i panieri e riprova.');
+  return `<div class="result"><p class="big">${right}<span>/${total}</span></p>
+    <p class="lede" style="margin:12px auto 0">${msg}</p>
+    <p class="note" style="text-align:center">Tempo usato: ${clock(used)} su ${EXAM_MIN}:00${skipped ? ` · ${skipped} ${skipped === 1 ? 'domanda senza risposta' : 'domande senza risposta'}` : ''}</p></div>
+  ${wrong.length ? `<h3 class="sec">Da rivedere</h3><ol class="review">${wrong.map(r => { const q = itemsOf(s)[r.qi]; return `<li><p><b>${esc(q.q)}</b></p>${r.chosen != null ? `<p class="yours">La tua: ${esc(q.o[r.chosen])}</p>` : ''}<p class="ans">Giusta: <span class="hlt">${esc(q.o[q.a])}</span></p></li>`; }).join('')}</ol>` : ''}
+  <div class="row"><button class="btn primary" data-act="examall">Rifai la prova</button><button class="btn ghost" data-act="open" data-arg="${p.id}">Torna alla materia</button></div>`;
+}
 function vResults(){
   const s = S.session, p = packOf(s.pid);
+  if (s.timed) return vExamResults(s, p);
   const graded = s.res.filter(r => r.ok !== null);
   const right = graded.filter(r => r.ok).length;
   const wrong = s.res.filter(r => r.ok === false);
@@ -1487,7 +1507,7 @@ const H = {
     const p = packOf(id); if (p){ S.year = p.year; for (const x of familyOf(p)) removePack(x); } S.view = 'year'; render(); toast('Materia eliminata');
   },
   quiz(kind){ startQuiz(kind); },
-  quit(){ const s = S.session; if (s && s.res.length){ S.view = 'results'; } else { S.view = s && ['pre', 'lgloss'].includes(s.kind) ? 'lesson' : 'pack'; S.session = null; } render(); },
+  quit(){ const s = S.session; if (s && s.timed){ s.endedAt = Date.now(); S.view = 'results'; return render(); } if (s && s.res.length){ S.view = 'results'; } else { S.view = s && ['pre', 'lgloss'].includes(s.kind) ? 'lesson' : 'pack'; S.session = null; } render(); },
   pick(k){
     const s = S.session, p = packOf(s.pid), qi = s.list[s.i], q = itemsOf(s)[qi];
     const orig = s.order[+k];
@@ -1549,6 +1569,13 @@ const H = {
     const p = packOf(S.lessonPid || S.pid), L = p && pretestOf(p, +n);
     if (!L || !L.qs.length) return toast('Le domande di questa lezione non sono ancora state inserite');
     S.session = { pid: p.id, kind: 'pre', items: L.qs, list: shuffle(L.qs.map((_, i) => i)), i: 0, res: [] };
+    setupQ(); S.view = 'quiz'; render();
+  },
+  examall(){
+    const p = packOf(S.pid), all = paniereItems(p);
+    if (!all.length) return toast('Non ci sono ancora domande nei panieri');
+    const items = shuffle(all.slice()).slice(0, EXAM_N);
+    S.session = { pid: p.id, kind: 'exam', timed: true, deadline: Date.now() + EXAM_MIN * 60000, items, list: items.map((_, i) => i), i: 0, res: [] };
     setupQ(); S.view = 'quiz'; render();
   },
   review(){
@@ -1679,6 +1706,14 @@ app.addEventListener('change', (e) => {
 });
 window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); installEvt = e; if (S.view === 'settings') render(); });
 window.addEventListener('appinstalled', () => { installEvt = null; toast('App installata'); });
+
+/* conto alla rovescia della prova d'esame */
+setInterval(() => {
+  const s = S.session; if (!s || !s.deadline || S.view !== 'quiz') return;
+  const left = s.deadline - Date.now();
+  if (left <= 0){ s.timeUp = true; s.endedAt = s.deadline; S.view = 'results'; render(); window.scrollTo(0, 0); return; }
+  const el = $('#timer'); if (el){ el.textContent = '⏱ ' + clock(left); el.classList.toggle('low', left < 5 * 60000); }
+}, 1000);
 
 /* ---------- avvio ---------- */
 /* Termini di glossario da aggiungere una sola volta a una materia (per nome). */
