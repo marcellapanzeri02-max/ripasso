@@ -161,6 +161,10 @@ input[type=password],input[type=search]{width:100%;font:inherit;color:var(--ink)
 .pack.year{padding:20px 20px;gap:6px}
 .pack.year .pack-name{font-size:23px;letter-spacing:.01em}
 .tabs{margin:4px 0 0}
+.kps{display:grid;gap:8px;margin:6px 0 4px}
+.kp{display:flex;gap:10px;align-items:flex-start;padding:11px 12px;border:2px solid var(--line);border-radius:12px;cursor:pointer;line-height:1.4;font-size:16px}
+.kp input{width:20px;height:20px;flex:none;margin:1px 0 0;accent-color:var(--ok)}
+.kp.on{border-color:var(--ok);background:var(--ok-bg)}
 .timer{font-variant-numeric:tabular-nums;color:var(--ink)}
 .timer.low{color:var(--bad)}
 .donebox{margin-top:18px}
@@ -810,7 +814,7 @@ function startQuiz(kind, list){
 const itemsOf = (s) => s.items || packOf(s.pid).qs;
 function setupQ(){
   const s = S.session, q = itemsOf(s)[s.list[s.i]];
-  Object.assign(s, { flipped: false, phase: 'ask', chosen: null, ok: null, why: '', whyBusy: false, fixing: false, draft: '', verdict: null, prev: null, locked: false });
+  Object.assign(s, { flipped: false, checked: [], phase: 'ask', chosen: null, ok: null, why: '', whyBusy: false, fixing: false, draft: '', verdict: null, prev: null, locked: false });
   s.order = isMC(q) ? (keepOrder(q) ? q.o.map((_, i) => i) : shuffle(q.o.map((_, i) => i))) : [];
 }
 function applyStat(q, ok){ const s = q.s; if (ok){ s.c++; s.b = Math.min(5, s.b + 1); } else { s.w++; s.b = 0; } s.t = Date.now(); }
@@ -1051,6 +1055,7 @@ function vPack(){
   <div class="modes" style="margin-top:18px">
     <button class="mode" disabled><b>Ripasso intelligente</b><span>Domande in arrivo</span></button>
     <button class="mode" disabled><b>Simulazione d’esame</b><span>Domande in arrivo</span></button>
+    ${(() => { const o = p.open || []; return parent ? `<button class="mode" data-act="opentest" ${o.length ? '' : 'disabled'}><b>Domande aperte</b><span>${o.length ? `${o.length} domande: rispondi, poi confronta con i punti chiave` : 'Domande in arrivo'}</span></button>` : ''; })()}
   </div>`;
   if (!p.qs.length) return `${head}
   <div class="empty">Ancora nessuna domanda del paniere.<br>Caricalo per iniziare a ripassare.</div>
@@ -1064,6 +1069,7 @@ function vPack(){
   <div class="modes">
     <button class="mode primary" data-act="quiz" data-arg="smart"><b>Ripasso intelligente</b><span>${Math.min(20, p.qs.length)} domande, più spesso quelle che sbagli</span></button>
     <button class="mode" data-act="quiz" data-arg="exam" ${mcq ? '' : 'disabled'}><b>Simulazione d’esame</b><span>${Math.min(30, mcq)} domande a scelta multipla, correzione alla fine</span></button>
+    ${(() => { const o = p.open || []; return parent ? `<button class="mode" data-act="opentest" ${o.length ? '' : 'disabled'}><b>Domande aperte</b><span>${o.length ? `${o.length} domande: rispondi, poi confronta con i punti chiave` : 'Domande in arrivo'}</span></button>` : ''; })()}
   </div>
   ${foot}`;
 }
@@ -1329,6 +1335,23 @@ function vQuiz(){
   const exam = s.kind === 'exam';
   const top = `<div class="qtop"><button class="link" data-act="quit">Esci</button>${s.deadline ? `<span class="timer" id="timer" aria-label="Tempo rimasto">⏱ ${clock(s.deadline - Date.now())}</span>` : ''}<span>${s.i + 1} di ${s.list.length}</span></div>
     <div class="bar thin"><span style="width:${(s.i / s.list.length) * 100}%"></span></div>`;
+  if (q.points){
+    const need = Math.max(1, q.points.length - 1), chk = s.checked || [];
+    const pts = q.points.map((t, i) => `<label class="kp ${chk[i] ? 'on' : ''}"><input type="checkbox" data-kp="${i}" ${chk[i] ? 'checked' : ''} ${s.phase === 'done' ? 'disabled' : ''}><span>${esc(t)}</span></label>`).join('');
+    const yours = s.draft ? `<div class="model" style="border-left-color:var(--line)"><b>La tua risposta</b><p>${esc(s.draft)}</p></div>` : '';
+    let body;
+    if (s.phase === 'ask') body = `<textarea id="ans" rows="6" placeholder="Scrivi la tua risposta (oppure ripetila a voce)" aria-label="La tua risposta">${esc(s.draft)}</textarea>
+      <div class="row"><button class="btn primary" data-act="showpts">Mostra i punti chiave</button></div>`;
+    else if (s.phase === 'pts') body = `${yours}<p class="note" style="margin:14px 0 6px">Spunta i punti che hai detto (ne servono almeno ${need} su ${q.points.length}):</p>
+      <div class="kps">${pts}</div>
+      <div class="model"><b>Risposta modello</b><p>${esc(q.r)}</p></div>
+      <div class="row"><button class="btn primary" data-act="ptdone">Conferma</button></div>`;
+    else body = `<div class="fb ${s.ok ? 'ok' : 'bad'}"><b>${s.ok ? 'Risposta completa' : 'Da ripassare'}</b><p>Hai detto ${chk.filter(Boolean).length === 1 ? '1 punto chiave' : chk.filter(Boolean).length + ' punti chiave'} su ${q.points.length}.</p></div>
+      <div class="kps">${pts}</div>
+      <div class="model"><b>Risposta modello</b><p>${esc(q.r)}</p></div>
+      <div class="row"><button class="btn primary" data-act="next">Avanti</button></div>`;
+    return `${top}<article class="qcard"><p class="q">${esc(q.q)}</p>${body}</article>`;
+  }
   if (q.card) return `${top}
     <button class="flip ${s.flipped ? 'flipped' : ''}" data-act="flip" aria-label="Gira la flashcard" aria-pressed="${!!s.flipped}">
       <span class="flip-in">
@@ -1594,6 +1617,17 @@ const H = {
     S.session = { pid: p.id, kind: 'exam', timed: true, deadline: Date.now() + EXAM_MIN * 60000, items, list: items.map((_, i) => i), i: 0, res: [] };
     setupQ(); S.view = 'quiz'; render();
   },
+  opentest(){
+    const p = packOf(S.pid), o = (p && p.open) || [];
+    if (!o.length) return toast('Le domande aperte di questa parte non sono ancora state inserite');
+    S.session = { pid: p.id, kind: 'open', items: o, list: shuffle(o.map((_, i) => i)), i: 0, res: [] };
+    setupQ(); S.view = 'quiz'; render();
+  },
+  showpts(){ const s = S.session; s.draft = ($('#ans')?.value || '').trim(); s.checked = []; s.phase = 'pts'; render(); },
+  ptdone(){
+    const s = S.session, q = itemsOf(s)[s.list[s.i]], n = (s.checked || []).filter(Boolean).length;
+    record(n >= Math.max(1, q.points.length - 1), null); s.phase = 'done'; render();
+  },
   review(){
     const p = packOf(S.pid), { items } = reviewItems(p);
     if (!items.length) return toast('Completa almeno una lezione per sbloccare questo quiz');
@@ -1694,6 +1728,7 @@ app.addEventListener('input', (e) => {
 });
 app.addEventListener('change', (e) => {
   const id = e.target.id;
+  if (e.target.dataset && e.target.dataset.kp !== undefined && S.session){ const k = +e.target.dataset.kp; (S.session.checked = S.session.checked || [])[k] = e.target.checked; e.target.closest('.kp').classList.toggle('on', e.target.checked); return; }
   if (id === 'f-file'){
     syncAdd();
     const before = S.add.files.length;
@@ -1876,6 +1911,105 @@ const QUESTION_SEEDS = [{
   id: 'paniere-ling-l25-32', pack: 'LINGUISTICA GENERALE', unit: 'Lezione 25-32',
   sets: [{"f":"Quiz 1","qs":[["Nella frase “Bruto uccise Cesare”, che cosa succede se si scambiano le posizioni di Bruto e Cesare?",["Il significato rimane necessariamente identico","Cambia soltanto il tempo verbale","Cambia soltanto il genere dei sostantivi","Cambiano i ruoli grammaticali e quindi cambia il significato della frase"],3],["Perché gli spazi nella scrittura non possono essere considerati una caratteristica fondamentale per definire le parole?",["Perché tutte le lingue utilizzano esclusivamente la scrittura continua","Perché esistono lingue che non utilizzano spazi tra le parole nella scrittura","Perché la scrittura non rappresenta mai il linguaggio parlato","Perché gli spazi vengono utilizzati soltanto nella poesia"],1],["Perché è difficile dare una definizione semplice di “parola”?",["Perché ogni lingua utilizza parole completamente diverse","Perché le parole esistono soltanto nelle lingue scritte","Perché le parole non possiedono una struttura interna","Perché la nozione di parola coinvolge aspetti fonologici, grammaticali e semantici"],3],["Da quali elementi è composta la parola “gatti” nell’analisi proposta?",["Da tre morfi: gat-t-i","Dal solo morfo grammaticale -i","Dal morfo lessicale gatt- e dal morfo grammaticale -i","Da un unico morfo privo di struttura interna"],2],["Qual è la principale differenza tra italiano e latino nell’indicazione dei ruoli grammaticali presentata nel capitolo?",["L’italiano utilizza esclusivamente la morfologia, mentre il latino utilizza l’ordine delle parole","L’italiano fa maggiore affidamento sull’ordine delle parole, mentre il latino utilizza maggiormente la morfologia","Entrambe le lingue utilizzano esattamente gli stessi meccanismi","Il latino non possiede strumenti morfologici per indicare i ruoli grammaticali"],1],["Qual è una delle caratteristiche fondamentali della conoscenza morfologica di un parlante?",["La capacità di evitare qualsiasi forma di parola nuova","La capacità di produrre e interpretare parole che non ha mai incontrato prima","La capacità di riconoscere soltanto le parole della propria lingua scritta","La capacità di ricordare tutte le parole del dizionario"],1],["Che cosa sono i lessemi?",["Morfi dotati di un significato lessicale più ricco, tipicamente appartenenti alle categorie di sostantivo, verbo e aggettivo","Morfi che esprimono esclusivamente il numero","Elementi che appartengono soltanto alla fonologia","Morfi privi di qualsiasi significato"],0],["Che cosa dimostra l’esempio della parola inventata “frimpare”?",["Che le parole inventate non possono essere interpretate","Che la morfologia riguarda esclusivamente parole già esistenti","Che una parola può essere utilizzata soltanto se è presente nel dizionario","Che possiamo comprendere e utilizzare parole nuove applicando le regole morfologiche della lingua"],3],["Che cosa si intende per lessico?",["L’insieme dei suoni utilizzati da una lingua","L’insieme delle parole conosciute e rappresentate nella conoscenza linguistica di una persona o di una lingua","L’insieme dei suoni utilizzati da una lingua","L’insieme delle sole regole sintattiche"],1],["Qual è l’unità più piccola che combina una forma e un significato secondo il capitolo?",["Il fonema","La frase","La sillaba","Il morfo"],3],["Qual è la differenza tra morfo e morfema?",["Morfo e morfema sono sempre sinonimi perfetti","Il morfema è una parola autonoma, mentre il morfo è sempre una frase","Il morfo indica il significato, mentre il morfema indica esclusivamente il suono","Il morfo è la forma materiale, mentre il morfema è l’informazione o il significato veicolato da quella forma"],3],["Quale definizione di parola viene proposta nel capitolo?",["Qualsiasi sequenza di suoni dotata di significato","Un segno astratto che costituisce la più piccola unità grammaticalmente indipendente del linguaggio","La più piccola unità sonora della lingua","Una sequenza di lettere separata necessariamente da uno spazio"],1],["Quale differenza fondamentale esiste tra parole semplici e parole complesse?",["Le parole semplici hanno sempre un solo significato, quelle complesse sempre più significati","Le parole semplici sono sempre verbi, quelle complesse sempre sostantivi","Le parole semplici contengono un solo morfo, mentre quelle complesse ne contengono più di uno","Le parole complesse sono necessariamente più lunghe delle parole semplici"],2],["Quale tra i seguenti è un morfo con funzione principalmente grammaticale?",["Il morfo can- in cane","Il morfo dorm- in dormire","Il morfo gatt- in gatti","Il morfo -i in gatti"],3],["Che cosa studia principalmente la morfologia?",["La produzione fisica dei suoni del parlato","La relazione tra forma e significato all’interno delle parole e tra le parole","La combinazione delle parole nelle frasi","Il significato complessivo degli enunciati nel contesto"],1]]},{"f":"Quiz 2","qs":[["Quale tra i seguenti è un esempio di composizione?",["infelice","debolezza","gas serra","cantante"],2],["Qual è la differenza principale tra derivazione e flessione?",["La derivazione riguarda soltanto i verbi, mentre la flessione soltanto i sostantivi","La derivazione crea nuovi lessemi, mentre la flessione aggiunge informazioni grammaticali a un lessema","La derivazione aggiunge sempre informazioni grammaticali, mentre la flessione crea nuove parole","Derivazione e flessione sono due termini per indicare esattamente lo stesso processo"],1],["Che cos’è l’apofonia?",["L’aggiunta di un suffisso alla fine della parola","La ripetizione di una parte della radice","La caduta di una consonante finale","Un cambiamento grammaticale ottenuto attraverso la sostituzione di una vocale all’interno della radice"],3],["Che cosa sono i morfi legati?",["Morfi che possiedono soltanto significato lessicale","Morfi che appartengono esclusivamente alle lingue indoeuropee","Morfi che possono sempre costituire parole autonome","Morfi che devono essere associati a una radice o a un altro morfo"],3],["Che cos’è un infisso?",["Un affisso collocato sempre alla fine della parola","Un affisso collocato sempre all’inizio della parola","Un morfo che può comparire soltanto da solo","Un affisso inserito all’interno della radice lessicale"],3],["Che cosa sono gli allomorfi?",["Morfi che non possiedono alcuna funzione grammaticale","Parole diverse che possiedono significati completamente diversi","Forme diverse che veicolano lo stesso morfema","Fonemi diversi che appartengono a lingue diverse"],2],["Che cos’è la circonfissazione?",["La ripetizione completa della radice","L’uso di un morfema discontinuo formato da due parti che circondano la radice","Lo spostamento dell’accento all’interno della parola","La sostituzione della radice con una parola completamente diversa"],1],["Quale esempio del capitolo illustra l’allomorfia del plurale in inglese?",["un- in unhappy e re- in rewrite","-ed in walked e -ing in walking","-s in cats, -e- in men e morfo zero in sheep","-er in singer e -ist in violinist"],2],["Quale coppia rappresenta un esempio di suppletivismo totale?",["call – called","go – went","play – played","walk – walked"],1],["Che cosa si intende per “testa” di un composto?",["L’elemento che viene necessariamente scritto con la lettera maiuscola","L’elemento che determina generalmente il significato e la categoria grammaticale principale del composto","Il primo elemento pronunciato del composto","L’elemento che contiene sempre il maggior numero di morfi"],1],["Quale fenomeno caratterizza la morfologia dell’arabo descritta nel capitolo?",["Le vocali vengono inserite all’interno di radici consonantiche secondo specifici schemi","Il plurale viene espresso esclusivamente attraverso prefissi","Le parole sono prive di radici consonantiche","Tutti i significati grammaticali sono espressi esclusivamente mediante suffissi"],0],["Che cosa sono i morfi liberi?",["Morfi che compaiono esclusivamente nei verbi","Morfi che non possiedono alcun significato","Morfi che possono comparire autonomamente come parole","Morfi che devono essere sempre preceduti da un prefisso"],2],["Che cos’è l’affissazione?",["La combinazione di due frasi in una sola","Il cambiamento della posizione dell’accento","La sostituzione completa di una radice con un’altra","L’aggiunta di un morfema a una radice o a un altro affisso"],3],["Qual è la differenza tra prefisso e suffisso?",["Il prefisso si colloca dopo la base, mentre il suffisso prima","Entrambi si collocano necessariamente all’interno della radice","Il prefisso è sempre lessicale, mentre il suffisso è sempre fonologico","Il prefisso si colloca prima della base, mentre il suffisso si colloca dopo"],3],["Quale informazione può essere espressa dalla morfologia flessiva?",["Soltanto il significato lessicale della radice","Persona, numero, genere, caso, tempo e modo","Esclusivamente la posizione delle parole nella frase","Soltanto la categoria dei sostantivi"],1]]}]
 }];
+/* Domande aperte del paniere: [domanda, [punti chiave], risposta modello]. Aggiunte una sola volta a ogni parte. */
+const OPEN_SEEDS = [{ id: 'open-ling-v1', pack: 'LINGUISTICA GENERALE', units: {
+  'Lezione 1-8': [
+    ['Qual è la principale differenza tra comunicazione diadica e comunicazione triadica?', [
+      'Diadica: il messaggio mette in relazione emittente e destinatario senza riferirsi a un oggetto esterno (nessun referente).',
+      'Veicola emozioni o intenzioni tra due esemplari della stessa specie (es. «ciao», «hello»).',
+      'Triadica: oltre a collegare emittente e destinatario, il messaggio rinvia a un referente esterno.',
+      'Esempio: le grida d’allarme dei cercopitechi verdi (referente presente: il leopardo).'],
+      'Nella comunicazione diadica il messaggio realizza direttamente una relazione tra emittente e destinatario senza riferirsi a un oggetto esterno: veicola emozioni o intenzioni, come il saluto «ciao». Nella comunicazione triadica il messaggio, oltre a mettere in relazione emittente e destinatario, rinvia a un referente esterno, come le grida d’allarme dei cercopitechi verdi che segnalano la presenza di un leopardo.'],
+    ['Qual è la differenza tra aritmetica e linguaggio naturale?', [
+      'Sono entrambi codici articolati e combinatori.',
+      'L’aritmetica ha una sinonimia calcolabile (2+2 = 1+3 = 4) e nessuna ambiguità.',
+      'Il linguaggio naturale ha una sinonimia incalcolabile ed è ambiguo (polisemia, ambiguità strutturale: «Mario vide suo padre in piazza col binocolo»).',
+      'Il linguaggio dipende dal contesto; l’ambiguità è anche una fonte di flessibilità.'],
+      'Aritmetica e linguaggio naturale sono entrambi codici articolati e combinatori, ma l’aritmetica ha una sinonimia calcolabile (2+2 = 1+3 = 4) e non è ambigua. Il linguaggio naturale ha invece una sinonimia incalcolabile, è ambiguo (polisemia, ambiguità strutturale) e dipende dal contesto: un’ambiguità che è anche una fonte di flessibilità comunicativa.'],
+    ['Cosa si intende per dipendenza dal contesto?', [
+      'Il significato di una parola o di un enunciato può dipendere dalla situazione comunicativa e dal co-testo.',
+      'Situazione: dove, quando e tra chi si parla. Co-testo: le parole che stanno intorno.',
+      'Esempio: «Prendimi il giubbino quando sali» cambia significato a seconda di dove viene detta (ambiguità pragmatica).',
+      'Permette di usare la stessa forma per molti significati (polisemia, vaghezza).'],
+      'È la proprietà per cui il significato di una parola o di un enunciato può dipendere dalla situazione comunicativa (dove, quando, tra chi si parla) e dal co-testo, cioè le parole che lo circondano. Ad esempio «Prendimi il giubbino quando sali» cambia significato a seconda del luogo in cui viene pronunciata. Grazie al contesto la stessa forma può servire a molti significati.']
+  ],
+  'Lezione 9-16': [
+    ['Qual è la principale differenza tra fonetica articolatoria e fonetica uditiva?', [
+      'Articolatoria: studia come gli organi dell’apparato fonatorio producono i suoni (polmoni, laringe, pieghe vocali, lingua, labbra, velo).',
+      'Uditiva: studia la percezione e l’elaborazione dei suoni da parte dell’apparato uditivo e del cervello (orecchio, ossicini, coclea, cellule ciliate, corteccia uditiva).',
+      'La prima riguarda chi parla, la seconda chi ascolta.',
+      'In mezzo c’è la fonetica acustica, che studia il suono come fenomeno fisico.'],
+      'La fonetica articolatoria studia come gli organi dell’apparato fonatorio (polmoni, laringe, pieghe vocali, lingua, labbra, velo) producono i suoni, cioè il punto di vista di chi parla. La fonetica uditiva studia come i suoni vengono percepiti ed elaborati dall’apparato uditivo e dal cervello, cioè il punto di vista di chi ascolta. Tra le due si colloca la fonetica acustica, che studia il suono come fenomeno fisico.'],
+    ['Cos’è il punto di articolazione?', [
+      'È il luogo dell’apparato fonatorio in cui avviene la principale restrizione del flusso d’aria.',
+      'Un articolatore attivo (lingua, labbro inferiore) si avvicina a uno passivo (denti, alveoli, palato).',
+      'Esempi: bilabiali [p b m], labiodentali [f v], alveolari [t d s n], palatali [j], velari [k g].',
+      'Insieme al modo di articolazione e alla sonorità serve a classificare le consonanti.'],
+      'Il punto di articolazione è il luogo dell’apparato fonatorio in cui avviene la principale restrizione del flusso d’aria, dove un articolatore attivo (come la lingua) si avvicina a uno passivo (come i denti o il palato). In base al punto si distinguono ad esempio consonanti bilabiali [p b m], labiodentali [f v], alveolari [t d s n] e velari [k g]. Insieme al modo e alla sonorità permette di classificare le consonanti.'],
+    ['Cos’è il modo di articolazione?', [
+      'È la modalità con cui viene ostacolato il passaggio dell’aria nella produzione di una consonante.',
+      'Occlusive: chiusura completa ([p t k]; [m] è un’occlusiva nasale).',
+      'Fricative: restringimento ([f v s z]); affricate: occlusiva più fricativa in un solo suono.',
+      'Laterali: l’aria passa ai lati della lingua ([l]); poi approssimanti e rotici.'],
+      'Il modo di articolazione è la modalità con cui viene ostacolato il passaggio dell’aria nella produzione di una consonante. Si hanno occlusive quando la chiusura è completa ([p t k], e [m] come occlusiva nasale), fricative quando c’è un restringimento ([f v s z]), affricate quando un’occlusiva e una fricativa si fondono in un solo suono, laterali quando l’aria passa ai lati della lingua ([l]), oltre ad approssimanti e rotici.']
+  ],
+  'Lezione 17-24': [
+    ['Che cos’è un fonema?', [
+      'È l’unità minima astratta del sistema fonologico capace di distinguere significati.',
+      'È una categoria mentale, non un suono fisico (Scuola di Praga: Trubeckoj e Jakobson).',
+      'Non ha un significato proprio: ha una funzione distintiva.',
+      'Si individua con le coppie minime (pane/cane); l’italiano ha poco più di trenta fonemi.'],
+      'Il fonema è l’unità minima astratta del sistema fonologico capace di distinguere significati. Non è un suono fisico ma una categoria mentale, come mostrò la Scuola di Praga con Trubeckoj e Jakobson. Non possiede un significato proprio, ma ha una funzione distintiva, che si individua con le coppie minime come pane/cane. L’italiano ne ha poco più di trenta.'],
+    ['Cosa sono gli allofoni?', [
+      'Sono varianti fonetiche di un fonema che non cambiano il significato.',
+      'Spesso sono in distribuzione complementare: compaiono in contesti diversi.',
+      'Esempi: la /p/ inglese di pin (aspirata) e di spin; la /n/ italiana in «incredibile» e «infelice».',
+      'Sono scelti automaticamente in base al contesto.'],
+      'Gli allofoni sono le diverse realizzazioni fonetiche di uno stesso fonema, che non determinano un cambiamento di significato. Spesso si trovano in distribuzione complementare, cioè compaiono in contesti diversi: ad esempio la /p/ inglese è aspirata in pin e non aspirata in spin, e la /n/ italiana cambia in «incredibile» e «infelice». La scelta dell’allofono avviene automaticamente in base al contesto.'],
+    ['Cosa sono le coppie minime?', [
+      'Sono coppie di parole che differiscono per un solo fonema e hanno significati diversi.',
+      'Servono a individuare i fonemi e le opposizioni fonologiche (come cambiare una sola variabile in un esperimento).',
+      'Esempi: pane/cane, tetto/detto; inglese pin/bin, ship/sheep.',
+      'Se sostituendo un suono il significato non cambia, si tratta di allofoni.'],
+      'Le coppie minime sono coppie di parole che differiscono per un solo fonema e hanno significati diversi, come pane/cane o tetto/detto (in inglese pin/bin). Sono lo strumento per individuare i fonemi di una lingua, come un esperimento in cui si modifica una sola variabile: se la sostituzione cambia il significato i due suoni sono fonemi distinti, se non lo cambia sono allofoni.']
+  ],
+  'Lezione 25-32': [
+    ['Qual è la differenza tra morfo e morfema?', [
+      'Il morfo è la forma materiale, la parte concreta della parola.',
+      'Il morfema è l’informazione o il significato veicolato dal morfo.',
+      'Un morfo può veicolare più morfemi: -i in «gatti» = {plurale} + {maschile}.',
+      'Esempio: can- (morfema lessicale «cane») + -i (morfema grammaticale).'],
+      'Il morfo è la parte materiale, morfo-fonologica, che si identifica in una parola; il morfema è l’informazione o il significato che il morfo veicola. Un morfo può veicolare uno o più morfemi: in «cani» il morfo can- veicola il morfema lessicale «cane», mentre il morfo -i veicola insieme i morfemi grammaticali {plurale} e {maschile}.'],
+    ['Cosa sono gli allomorfi?', [
+      'Sono varianti formali di uno stesso morfema, determinate dal contesto.',
+      'Forme diverse, stessa informazione.',
+      'Esempio: il plurale inglese -s in cats, il cambio vocalico in men, il morfo zero in sheep.',
+      'Esempio italiano: in- / im- («incapace», «impossibile»).'],
+      'Gli allomorfi sono varianti formali di uno stesso morfema, la cui scelta è determinata dal contesto: forme diverse che veicolano la stessa informazione. Ad esempio il plurale inglese si realizza con -s in cats, con un cambio vocalico in men e con un morfo zero in sheep; in italiano il prefisso negativo appare come in- in «incapace» e come im- in «impossibile».'],
+    ['Qual è la differenza tra morfo lessicale e morfo grammaticale?', [
+      'Morfo lessicale (lessema): significato lessicale più ricco, si riferisce a cose, qualità, azioni.',
+      'I lessemi appartengono a sostantivi, verbi e aggettivi e possono fare da radice (es. gatt-).',
+      'Morfo grammaticale: veicola informazioni grammaticali (numero, genere, tempo, persona) e mostra le relazioni tra i lessemi (es. -i, -ò in «cercò», «il», «di»).',
+      'I morfi grammaticali sono la «colla» che tiene insieme i lessemi nella frase.'],
+      'I morfi lessicali, o lessemi, hanno un significato lessicale più ricco: si riferiscono a cose, qualità e azioni, appartengono a sostantivi, verbi e aggettivi e possono fare da radice per parole più complesse (es. gatt-). I morfi grammaticali veicolano informazioni grammaticali come numero, genere, tempo e persona (es. -i in «gatti», -ò in «cercò») e, come articoli e preposizioni, mostrano le relazioni tra i lessemi: sono la «colla» della frase.']
+  ]
+} }];
+async function seedOpen(){
+  for (const seed of OPEN_SEEDS){
+    if (mode === 'idb'){ try { if (await IDB.get(seed.id)) continue; } catch {} }
+    const top = S.packs.find(x => x.name.trim().toUpperCase() === seed.pack && !x.parent);
+    if (!top) continue;
+    let all = true;
+    for (const [unit, list] of Object.entries(seed.units)){
+      const u = unitsOf(top).find(x => x.name === unit); if (!u){ all = false; continue; }
+      u.open = u.open || [];
+      const have = new Set(u.open.map(x => x.q));
+      for (const [q, points, r] of list) if (!have.has(q)) u.open.push({ id: newId(), q, points, r, o: [], a: null, m: true, x: '', s: { c: 0, w: 0, b: 0, t: 0 } });
+      await savePack(u);
+    }
+    if (all && mode === 'idb'){ try { await IDB.set(seed.id, true); } catch {} }
+  }
+}
 async function seedQuestions(){
   for (const seed of QUESTION_SEEDS){
     if (mode === 'idb'){ try { if (await IDB.get(seed.id)) continue; } catch {} }
@@ -1961,6 +2095,7 @@ async function boot(){
   await seedGlossary();
   await seedQuestions();
   await seedPretest();
+  await seedOpen();
   sample = apiKey ? makeSample() : null;
   S.view = 'home'; render();
 }
