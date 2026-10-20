@@ -1,6 +1,6 @@
 // Service worker di Ripasso: tiene l'app disponibile anche offline.
 // Quando modifichi index.html, aumenta il numero di versione qui sotto.
-const VERSION = 'ripasso-v65';
+const VERSION = 'ripasso-v66';
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png', './icons/icon-maskable-512.png', './icons/apple-touch-icon.png'];
 const CDN = [
   'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js',
@@ -28,6 +28,7 @@ self.addEventListener('fetch', (e) => {
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
   if (url.hostname === 'api.anthropic.com') return; // le chiamate all'IA vanno sempre in rete
+  if (/\.mp3$/i.test(url.pathname)) return;      // gli audio li gestisce il browser (richieste parziali)
 
   if (req.mode === 'navigate') {
     e.respondWith((async () => {
