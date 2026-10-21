@@ -1114,7 +1114,8 @@ const LESSON_IMAGES = {
     33: ['lezioni/linguistica-33-1.webp', 'lezioni/linguistica-33-2.webp', 'lezioni/linguistica-33-3.webp', 'lezioni/linguistica-33-4.webp'],
     34: ['lezioni/linguistica-34-1.webp', 'lezioni/linguistica-34-2.webp', 'lezioni/linguistica-34-3.webp', 'lezioni/linguistica-34-4.webp'],
     35: ['lezioni/linguistica-35-1.webp', 'lezioni/linguistica-35-2.webp', 'lezioni/linguistica-35-3.webp'],
-    36: ['lezioni/linguistica-36-1.webp', 'lezioni/linguistica-36-2.webp', 'lezioni/linguistica-36-3.webp', 'lezioni/linguistica-36-4.webp']
+    36: ['lezioni/linguistica-36-1.webp', 'lezioni/linguistica-36-2.webp', 'lezioni/linguistica-36-3.webp', 'lezioni/linguistica-36-4.webp'],
+    37: ['lezioni/linguistica-37-1.webp', 'lezioni/linguistica-37-2.webp', 'lezioni/linguistica-37-3.webp', 'lezioni/linguistica-37-4.webp']
   }
 };
 /* Audio di spiegazione per parte del paniere (file nella cartella audio/), con il testo letto. */
@@ -2050,7 +2051,7 @@ const OPEN_SEEDS = [{ id: 'open-ling-v1', pack: 'LINGUISTICA GENERALE', units: {
       'I morfi grammaticali sono la «colla» che tiene insieme i lessemi nella frase.'],
       'I morfi lessicali, o lessemi, hanno un significato lessicale più ricco: si riferiscono a cose, qualità e azioni, appartengono a sostantivi, verbi e aggettivi e possono fare da radice per parole più complesse (es. gatt-). I morfi grammaticali veicolano informazioni grammaticali come numero, genere, tempo e persona (es. -i in «gatti», -ò in «cercò») e, come articoli e preposizioni, mostrano le relazioni tra i lessemi: sono la «colla» della frase.']
   ]
-} }, { id: 'open-ling-l40', pack: 'LINGUISTICA GENERALE', units: {
+} }, { id: 'open-ling-l40-v2', pack: 'LINGUISTICA GENERALE', units: {
   'Lezione 33-40': [
     ['Qual è la differenza tra soggetto e predicato?', [
       'Grammatica tradizionale: il soggetto è «ciò di cui si parla», il predicato è «ciò che viene detto sul soggetto».',
@@ -2059,11 +2060,11 @@ const OPEN_SEEDS = [{ id: 'open-ling-v1', pack: 'LINGUISTICA GENERALE', units: {
       'Valenza: il predicato può essere monovalente («I dinosauri esistevano»), bivalente («Samantha prepara l’esame») o trivalente («Paul dà una mancia al cameriere»).'],
       'Secondo la grammatica tradizionale il soggetto è ciò di cui si parla e il predicato ciò che viene detto sul soggetto. Più precisamente, il soggetto è il costituente che intrattiene una particolare relazione sintattica con il predicato: in italiano lo si riconosce con un test di sostituzione, perché può essere sostituito da un pronome soggetto (i dinosauri → essi). Il predicato esprime l’evento, lo stato o la proprietà attribuita ai partecipanti della frase; in una visione più moderna esprime una proprietà di un argomento o una relazione tra argomenti, e il soggetto è uno di questi argomenti. In base al numero di argomenti il predicato può essere monovalente (I dinosauri esistevano), bivalente (Samantha prepara l’esame) o trivalente (Paul dà una mancia al cameriere).'],
     ['Cosa si intende per reggenza?', [
-      'È la relazione sintattica per cui un elemento (il reggente) determina o seleziona le caratteristiche di un altro elemento (il retto).',
-      'Il reggente, spesso un verbo o una preposizione, impone la forma o il tipo di complemento: es. «pensare» regge «a» (penso a te); in latino «cum» regge l’ablativo.',
-      'È legata alla valenza: il predicato seleziona i suoi argomenti e la forma con cui si realizzano.',
-      'Si distingue dall’accordo, in cui una parola assume caratteristiche morfologiche (genere, numero, persona) in funzione di un’altra (la casa bianca).'],
-      'La reggenza è la relazione sintattica per cui un elemento, detto reggente, determina o seleziona le caratteristiche di un altro elemento. Il reggente, spesso un verbo o una preposizione, impone ad esempio la forma o il tipo di complemento: il verbo «pensare» regge la preposizione «a» (penso a te), e in latino la preposizione «cum» regge l’ablativo. È collegata alla valenza, perché il predicato seleziona i propri argomenti e il modo in cui si realizzano. Va distinta dall’accordo, in cui una parola assume caratteristiche morfologiche come genere, numero e persona in funzione di un’altra (la casa bianca).'],
+      'È il rapporto di governo tra un elemento (governante) e un altro che dipende da esso, legato a proprietà lessicali: es. un verbo e il suo complemento («richiede il piacere»).',
+      'Latino: la preposizione «in» governa il caso, ablativo per la posizione (Caesar in urbe habitat) e accusativo per la direzione (Caesar in urbem ambulat).',
+      'Spagnolo: il sostantivo governa il genere dell’aggettivo (libro rojo / casa roja); ungherese: il verbo segnala se l’oggetto diretto è definito o indefinito (olvas-nak / olvas-sák).',
+      'Va distinta dall’accordo, cioè l’adattamento di un modificatore al valore del governante (questo cane / quei cani; el libro pequeño / los libros pequeños).'],
+      'La reggenza è il rapporto di governo tra un elemento, detto governante, e un altro che dipende da esso; dipende da proprietà lessicali e riguarda ad esempio il rapporto tra un verbo e il suo complemento («richiede il piacere»). In latino la preposizione «in» governa il caso: l’ablativo per la posizione (Caesar in urbe habitat) e l’accusativo per la direzione (Caesar in urbem ambulat). In spagnolo il sostantivo governa il genere dell’aggettivo (libro rojo, casa roja), e in ungherese il verbo segnala se l’oggetto diretto è definito o indefinito. La reggenza va distinta dall’accordo, che è l’adattamento di un modificatore al valore dell’elemento governante, come in «questo cane / quei cani» o «el libro pequeño / los libros pequeños».'],
     ['Cosa si intende per povertà dello stimolo?', [
       'È il problema per cui l’input linguistico che il bambino riceve è limitato e imperfetto (frasi incomplete, errori, poche correzioni).',
       'Eppure il bambino acquisisce in poco tempo una competenza linguistica molto complessa.',
@@ -2082,7 +2083,7 @@ async function seedOpen(){
       const u = unitsOf(top).find(x => x.name === unit); if (!u){ all = false; continue; }
       u.open = u.open || [];
       const have = new Set(u.open.map(x => x.q));
-      for (const [q, points, r] of list) if (!have.has(q)) u.open.push({ id: newId(), q, points, r, o: [], a: null, m: true, x: '', s: { c: 0, w: 0, b: 0, t: 0 } });
+      for (const [q, points, r] of list) if (have.has(q)) Object.assign(u.open.find(x => x.q === q), { points, r }); else u.open.push({ id: newId(), q, points, r, o: [], a: null, m: true, x: '', s: { c: 0, w: 0, b: 0, t: 0 } });
       await savePack(u);
     }
     if (all && mode === 'idb'){ try { await IDB.set(seed.id, true); } catch {} }
