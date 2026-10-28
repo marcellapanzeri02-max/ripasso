@@ -877,7 +877,7 @@ function unitCard(p){
 function reviewItems(p){
   const items = []; let lessons = 0;
   for (const u of unitsOf(p)) for (const n of lessonNums(u)){
-    const pr = lessonProgress(u, n); if (!pr.done) continue;
+    const pr = lessonProgress(u, n); if (!pr.done || !pr.total) continue;
     lessons++;
     items.push(...pr.qs);
     for (const t of pr.terms){
@@ -1195,16 +1195,18 @@ function lessonNums(p){
 }
 const pretestOf = (p, n) => (p.pretest || []).find(x => x.n === n);
 const lessonTerms = (p, n) => (p.glossary || []).filter(t => lessonNo(t) === n);
-/* Una lezione è fatta quando tutte le sue domande hanno l'ultima risposta giusta e tutti i suoi termini l'ultima volta erano «me la ricordo». */
+/* Una lezione è fatta quando tutte le sue domande hanno l'ultima risposta giusta e tutti i suoi termini l'ultima volta erano «me la ricordo».
+   Una lezione senza domande né termini è fatta quando è segnata come vista (p.viewed). */
 function lessonProgress(p, n){
   const L = pretestOf(p, n), qs = L ? L.qs : [], terms = lessonTerms(p, n), items = qs.concat(terms);
   const ok = items.filter(x => x.s.t && x.s.b >= 1).length;
-  return { L, qs, terms, imgs: lessonImages(p, n), total: items.length, pct: items.length ? Math.round(ok / items.length * 100) : 0, done: items.length > 0 && ok === items.length };
+  const viewed = (p.viewed || []).includes(n);
+  return { L, qs, terms, imgs: lessonImages(p, n), total: items.length, viewed, pct: items.length ? Math.round(ok / items.length * 100) : 0, done: items.length ? ok === items.length : viewed };
 }
 function vLessons(pairs){
   const card = ([p, n]) => {
-    const { L, qs, terms, imgs, total, pct, done } = lessonProgress(p, n);
-    const what = [qs.length ? `${qs.length} domande` : 'Domande in arrivo', terms.length ? `${terms.length} termini` : '', imgs.length ? 'spiegazione' : '', total ? (done ? 'completata' : `${pct}% completata`) : ''].filter(Boolean).join(' · ');
+    const { L, qs, terms, imgs, total, viewed, pct, done } = lessonProgress(p, n);
+    const what = [qs.length ? `${qs.length} domande` : 'Domande in arrivo', terms.length ? `${terms.length} termini` : '', imgs.length ? 'spiegazione' : '', total ? (done ? 'completata' : `${pct}% completata`) : (viewed ? 'vista' : 'non vista')].filter(Boolean).join(' · ');
     return `<button class="pack" data-act="lesson" data-arg="${p.id}:${n}">
       <span class="pack-name">Lezione ${n}</span>
       ${L && L.title ? `<span class="pack-meta">${esc(L.title)}</span>` : ''}
@@ -1256,7 +1258,8 @@ function vLesson(){
   ${L && L.title ? `<p class="lede" style="margin:-8px 0 16px">${esc(L.title)}</p>` : ''}
   <div class="seg tabs ${parts.length === 3 ? 'three' : ''}" role="radiogroup" aria-label="Sezione della lezione">
     ${parts.map(k => `<button role="radio" aria-checked="${tab === k}" data-act="lpart" data-arg="${k}">${label[k]}</button>`).join('')}
-  </div>${body}`;
+  </div>${body}
+  ${qs.length || terms.length ? '' : (() => { const v = (p.viewed || []).includes(n); return `<div class="modes" style="margin-top:18px"><button class="mode ${v ? '' : 'primary'}" data-act="viewed" aria-pressed="${v}"><b>${v ? '✓ Lezione vista' : 'Segna come vista'}</b><span>${v ? 'È tra le lezioni fatte. Tocca per segnarla come non vista' : 'Questa lezione non ha domande: segnala quando l’hai studiata'}</span></button></div>`; })()}`;
 }
 
 function openZoom(src){
@@ -1677,6 +1680,7 @@ const H = {
   lpart(x){ S.lpart = ['img', 'gl'].includes(x) ? x : 'q'; render(); },
   lgloss(kind){ const p = packOf(S.lessonPid || S.pid); startGloss(kind, lessonTerms(p, S.lesson), p.id, 'lgloss'); },
   zoom(src){ openZoom(src); },
+  viewed(){ const p = packOf(S.lessonPid || S.pid), n = S.lesson; if (!p) return; const v = new Set(p.viewed || []); v.has(n) ? v.delete(n) : v.add(n); p.viewed = [...v].sort((a, b) => a - b); savePack(p); toast(v.has(n) ? 'Lezione segnata come vista' : 'Lezione segnata come non vista'); render(); },
   prelesson(n){
     const p = packOf(S.lessonPid || S.pid), L = p && pretestOf(p, +n);
     if (!L || !L.qs.length) return toast('Le domande di questa lezione non sono ancora state inserite');
