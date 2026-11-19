@@ -418,6 +418,12 @@ input[type=text],input:not([type]),textarea,select,input[type=password],input[ty
 input[type=date]{min-height:42px;padding:8px 10px}
 img,video,audio,table,pre{max-width:100%}
 .openq audio{width:100%}
+/* intestazione con foto grande */
+header.welcome{position:relative;padding:10px 12px;gap:14px;margin-bottom:2px}
+header.welcome .avatar{width:96px;height:96px;border:3px solid rgba(255,165,46,.55)}
+header.welcome .brand h1{font:900 30px/1 "Nunito",system-ui,sans-serif;letter-spacing:.07em}
+header.welcome .brand span{display:block;font:800 15px/1.2 "Nunito",system-ui,sans-serif;color:var(--orange);letter-spacing:.04em;margin-top:5px}
+header.welcome .iconbtn{position:absolute;top:10px;right:10px;width:38px;height:38px}
 </style>
 </head>
 <body>
@@ -1122,9 +1128,8 @@ function vHome(){
   }).join('');
   const quick = [['study', 'sun', 'Studio oggi', '#FFA52E'], ['ripasso', 'repeat', 'Ripasso', '#4FD1A5'], ['progress', 'chart', 'Statistiche', '#8FB3FF'], ['exams', 'plan', 'Piano di studio', '#C58CFF']]
     .map(([act, ic, label, c]) => '<button class="qbtn" style="--q:' + c + '" data-act="' + act + '"><span class="qi">' + ico(ic) + '</span>' + label + '</button>').join('');
-  return '<header class="hd"><span class="logo">' + ico('cap') + '</span><div class="brand"><b>MARCY</b><span>Back to University</span></div>' + ILLU
+  return '<header class="welcome">' + AVATAR + '<div class="brand"><h1>MARCY</h1><span>Back to University</span></div>'
     + '<button class="iconbtn" data-act="settings" aria-label="Impostazioni">' + ico('gear') + '</button></header>'
-    + '<section class="welcome">' + AVATAR + '<div><h1>Ciao Marcy!</h1><p>Il tuo percorso universitario</p></div></section>'
     + (ne.length ? '<div class="exams2">' + ne.map((p, i) => '<button class="nextexam" style="--c:' + subColor(p) + '" data-act="exams"><span class="nxtop">' + ico('cal') + '<small>' + (i ? 'Esame successivo' : 'Prossimo esame') + '</small></span><b>' + esc(p.name) + '</b><span class="nxbot"><small>' + new Date(p.examDate + 'T00:00:00').toLocaleDateString('it-IT', { day: 'numeric', month: 'short', year: 'numeric' }) + '</small><em>' + inDays(daysTo(p.examDate)) + '</em></span></button>').join('')
       + (ne.length < 2 ? '<button class="nextexam add" data-act="exams"><span class="nxtop">' + ico('cal') + '<small>Secondo esame</small></span><b>Aggiungi una data</b><span class="nxbot"><small>Dalla sezione Esami</small></span></button>' : '') + '</div>' : '')
     + '<div class="kpis">'
