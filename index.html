@@ -69,13 +69,32 @@ button{font:inherit;color:inherit}
 .row .btn{flex:1 1 140px}
 
 .packs{display:grid;gap:12px}
-.pack{display:grid;gap:4px;text-align:left;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px 18px;cursor:pointer;width:100%}
+.pack{box-sizing:border-box;display:grid;gap:4px;text-align:left;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px 18px;cursor:pointer;width:100%}
 .pack-kind{font-size:14px;color:var(--muted)}
 .pack-name{font-family:"Nunito",system-ui,sans-serif;font-weight:600;font-size:21px;line-height:1.2}
 .pack-meta{font-size:15px;color:var(--muted)}
 .bar{display:block;height:8px;border-radius:8px;background:var(--line);overflow:hidden;margin-top:6px}
-.bar>span{display:block;height:100%;background:var(--hl);border-radius:8px;transition:width .3s}
+.bar>span{display:block;height:100%;border-radius:8px;transition:width .3s}
 .bar.thin{height:5px;margin:8px 0 18px}
+.pack{transition:transform .15s ease,box-shadow .15s ease}
+.pack:active{transform:scale(.985)}
+.badge{position:absolute;right:16px;top:50%;transform:translateY(-50%);width:48px;height:48px;border-radius:15px;background:var(--c);color:#fff;display:grid;place-items:center;font:900 17px/1 "Nunito",system-ui,sans-serif;letter-spacing:.02em;box-shadow:0 6px 14px -8px var(--c)}
+.pack.year{position:relative;gap:6px;padding:20px 78px 20px 22px;border:1px solid rgba(255,255,255,.08);color:#fff;background:linear-gradient(135deg,var(--c),color-mix(in srgb,var(--c) 70%,#000));box-shadow:0 14px 28px -16px var(--c)}
+.pack.year .pack-name{font-weight:900;font-size:21px;letter-spacing:.01em}
+.pack.year .pack-meta{color:rgba(255,255,255,.82)}
+.pack.year .bar{background:rgba(255,255,255,.22)}
+.pack.year .bar>span{background:#FFB15C}
+.pack.year .badge{background:rgba(255,255,255,.16);box-shadow:none}
+.pack.sub{position:relative;padding-right:80px;background:color-mix(in srgb,var(--c) 9%,var(--card));border:1px solid color-mix(in srgb,var(--c) 28%,var(--line));border-left:7px solid var(--c)}
+.pack.sub .pack-kind{color:color-mix(in srgb,var(--c) 75%,var(--ink));font-weight:700}
+.bar>span{background:var(--c,var(--hl))}
+.tinted .title{color:color-mix(in srgb,var(--c) 65%,var(--ink))}
+.tinted .title::after{content:"";display:block;width:56px;height:6px;border-radius:6px;background:var(--c);margin-top:10px}
+.tinted .pack:not(.sub){border-left:6px solid var(--c);background:color-mix(in srgb,var(--c) 6%,var(--card))}
+.tinted .seg button[aria-checked="true"]{border-color:var(--c);box-shadow:inset 0 -5px 0 var(--c)}
+.tinted .mode.primary{border-color:var(--c);box-shadow:inset 6px 0 0 var(--c)}
+.tinted .btn.primary{background:var(--c);border-color:var(--c);color:#fff}
+.tinted .crumb{color:color-mix(in srgb,var(--c) 70%,var(--muted));font-weight:700}
 .empty{border:2px dashed var(--line);border-radius:18px;padding:22px;margin-top:22px;color:var(--muted);text-align:center}
 
 .field{display:block;margin:0 0 16px}
@@ -160,8 +179,6 @@ input[type=password],input[type=search]{width:100%;font:inherit;color:var(--ink)
 .qlist .row2{margin-top:6px}
 .fmt{background:var(--paper);border-radius:12px;padding:12px 14px;font-size:14px;white-space:pre-wrap;margin:8px 0 0;font-family:ui-monospace,Consolas,monospace}
 .hint{font-size:15px;color:var(--muted);margin:0 0 8px}
-.pack.year{padding:20px 20px;gap:6px}
-.pack.year .pack-name{font-size:23px;letter-spacing:.01em}
 .tabs{margin:4px 0 0}
 .openq{margin-top:14px}
 .openq audio{margin:4px 0 2px}
@@ -256,6 +273,19 @@ const fixYear = (y) => [1, 2, 3].includes(+y) ? +y : 1;
 /* Materie da mostrare per prime nel loro anno, in quest'ordine; le altre seguono in ordine alfabetico. */
 const FIRST = ['LINGUISTICA GENERALE'];
 const rank = (p) => { const i = FIRST.indexOf(p.name.trim().toUpperCase()); return i < 0 ? FIRST.length : i; };
+/* Colori: ogni anno una famiglia (1° blu, 2° verde, 3° viola), ogni materia una sua tonalità. */
+const PALETTE = {
+  1: { year: '#1C3170', subs: ['#2F5BEA', '#1AA3E0', '#0E8BA6', '#8A7CF8', '#3D7BC4', '#38B6F2'] },
+  2: { year: '#155E3B', subs: ['#16A34A', '#0D9488', '#65A30D', '#059669', '#22A6A0', '#4D9F2C'] },
+  3: { year: '#4C1D95', subs: ['#7C3AED', '#C026D3', '#9D4EDD', '#DB2777', '#6D5BD0', '#B45CC9'] }
+};
+const yearColor = (y) => (PALETTE[y] || PALETTE[1]).year;
+function subColor(p){
+  const root = p.parent ? (packOf(p.parent) || p) : p, pal = PALETTE[root.year] || PALETTE[1];
+  const list = packsOfYear(root.year).sort((a, b) => a.name.localeCompare(b.name, 'it'));
+  return pal.subs[Math.max(0, list.findIndex(x => x.id === root.id)) % pal.subs.length];
+}
+const initials = (name) => (name.match(/[A-Za-zÀ-ÿ]{3,}/g) || [name]).slice(0, 2).map(w => w[0]).join('').toUpperCase();
 const byPriority = (a, b) => rank(a) - rank(b) || a.name.localeCompare(b.name, 'it');
 const srcOf = (p, q) => q.f || p.name;
 const sourcesOf = (p) => [...new Set(p.qs.map(q => srcOf(p, q)))];
@@ -851,7 +881,8 @@ function vHome(){
     const total = every.reduce((n, p) => n + p.qs.length, 0);
     const learned = every.reduce((n, p) => n + stats(p).learned, 0);
     const pct = total ? Math.round(learned / total * 100) : 0;
-    return `<button class="pack year" data-act="year" data-arg="${y}">
+    return `<button class="pack year" style="--c:${yearColor(y)}" data-act="year" data-arg="${y}">
+      <span class="badge">${y}°</span>
       <span class="pack-name">${label}</span>
       <span class="pack-meta">${packs.length ? `${packs.length} ${packs.length === 1 ? 'materia' : 'materie'}, ${total} ${total === 1 ? 'domanda' : 'domande'}, ${pct}% imparate` : 'Nessuna materia'}</span>
       <span class="bar"><span style="width:${pct}%"></span></span></button>`;
@@ -871,7 +902,8 @@ function unitCard(p){
   const pct = items ? Math.round(learned / items * 100) : 0;
   const kind = isContainer(p) ? fam.length + ' parti' : (items ? '' : 'Da caricare');
   const meta = items ? `${nq} ${nq === 1 ? 'domanda' : 'domande'} · ${nt} ${nt === 1 ? 'termine' : 'termini'}, ${pct}% imparato` : 'Ancora vuota';
-  return `<button class="pack${p.examDone ? ' faded' : ''}" data-act="open" data-arg="${p.id}">
+  return `<button class="pack sub${p.examDone ? ' faded' : ''}" style="--c:${subColor(p)}" data-act="open" data-arg="${p.id}">
+      <span class="badge">${esc(initials(p.name))}</span>
       ${p.examDone ? '<span class="pack-kind">✓ Esame dato</span>' : kind ? `<span class="pack-kind">${kind}</span>` : ''}
       <span class="pack-name">${esc(p.name)}</span>
       <span class="pack-meta">${meta}</span>
@@ -939,7 +971,8 @@ function vYear(){
     if (isContainer(p)) return unitCard(p, 'open');
     const st = stats(p); const pct = p.qs.length ? Math.round(st.learned / p.qs.length * 100) : 0;
     const n = sourcesOf(p).length;
-    return `<button class="pack" data-act="open" data-arg="${p.id}">
+    return `<button class="pack sub${p.examDone ? ' faded' : ''}" style="--c:${subColor(p)}" data-act="open" data-arg="${p.id}">
+      <span class="badge">${esc(initials(p.name))}</span>
       <span class="pack-kind">${!p.qs.length ? ((p.glossary || []).length ? 'Glossario' : 'Da caricare') : n > 1 ? n + ' fonti' : (p.kind === 'lezione' ? 'Lezione' : 'Paniere')}</span>
       <span class="pack-name">${esc(p.name)}</span>
       <span class="pack-meta">${p.qs.length ? `${p.qs.length} ${p.qs.length === 1 ? 'domanda' : 'domande'}, ${pct}% imparate` : ((p.glossary || []).length ? `${p.glossary.length} termini nel glossario` : 'Nessuna domanda: tocca per caricare il paniere')}</span>
@@ -1583,6 +1616,10 @@ function render(){
     case 'results': html = vResults(); break;
     default: html = '<div class="busy"><div class="spinner" aria-hidden="true"></div><p class="lede" style="margin:0">Apro i tuoi materiali…</p></div>';
   }
+  const cp = ['pack', 'lesson', 'quiz', 'openlist', 'results', 'answers', 'edit', 'gadd', 'gedit', 'build'].includes(S.view) && S.pid ? packOf(S.pid) : null;
+  const c = S.view === 'year' ? yearColor(S.year) : cp ? subColor(cp) : '';
+  if (c) app.style.setProperty('--c', c); else app.style.removeProperty('--c');
+  app.classList.toggle('tinted', !!c);
   app.innerHTML = html;
   if (S.view !== lastView){ window.scrollTo(0, 0); lastView = S.view; }
 }
