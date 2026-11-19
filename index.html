@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Ripasso</title>
+<title>Marcy back to university</title>
 <meta name="description" content="Carica i panieri delle tue materie, con le risposte, e studia con i quiz.">
 <meta name="theme-color" content="#17203A">
 <link rel="manifest" href="manifest.webmanifest">
@@ -12,7 +12,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Ripasso">
+<meta name="apple-mobile-web-app-title" content="Marcy back to university">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&display=swap" rel="stylesheet">
@@ -45,7 +45,7 @@ button{font:inherit;color:inherit}
 
 .hero{margin:18px 0 26px}
 .hero h1{font-size:clamp(44px,13vw,68px);font-weight:800;letter-spacing:-.02em}
-.mark{background:linear-gradient(transparent 58%,var(--hl) 58%,var(--hl) 92%,transparent 92%) no-repeat;background-size:100% 100%;padding:0 .08em;animation:swipe .7s cubic-bezier(.2,.7,.2,1) .15s both}
+.mark{background:linear-gradient(transparent 58%,var(--hl) 58%,var(--hl) 92%,transparent 92%) no-repeat;background-size:100% 100%;-webkit-box-decoration-break:clone;box-decoration-break:clone;padding:0 .08em;animation:swipe .7s cubic-bezier(.2,.7,.2,1) .15s both}
 @keyframes swipe{from{background-size:0 100%}}
 .lede{color:var(--muted);margin:10px 0 0;max-width:34em}
 .title{font-size:30px;font-weight:800;margin:6px 0 18px;letter-spacing:-.01em}
@@ -399,7 +399,7 @@ async function importData(file){
     }
     S.packs.sort((a, b) => (b.created || 0) - (a.created || 0));
     toast(n ? `Importate ${n} materie` : 'Nel file non ho trovato materie');
-  } catch { toast('Questo file non è un backup di Ripasso'); }
+  } catch { toast('Questo file non è un backup di Marcy back to university'); }
   render();
 }
 
@@ -855,7 +855,7 @@ function vHome(){
       <span class="bar"><span style="width:${pct}%"></span></span></button>`;
   }).join('');
   return `<div class="toprow"><button class="link" data-act="settings">Impostazioni</button></div>
-    <header class="hero"><h1><span class="mark">Ripasso</span></h1>
+    <header class="hero"><h1><span class="mark">Marcy back to university</span></h1>
     <p class="lede">Carica i panieri delle tue materie, anche con il file delle risposte: ti faccio le domande finché non le sai.</p></header>
     <div class="packs">${cards}</div>
     ${mode === 'memory' ? '<p class="note">Questo browser non permette di salvare: chiudendo l’app i materiali si perdono.</p>' : ''}`;
