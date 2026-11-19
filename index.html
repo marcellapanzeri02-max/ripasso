@@ -308,8 +308,8 @@ input[type=date]{width:100%;font:inherit;color:var(--ink);background:var(--paper
 .brand b{font-size:22px}.brand span{font-size:12px;margin-top:3px}
 .hd .illu{width:48px;height:36px}
 .iconbtn{width:40px;height:40px;border-radius:12px}
-.welcome{padding:10px 14px;gap:12px;border-radius:18px}
-.avatar{width:46px;height:46px}
+.welcome{padding:8px 14px 8px 10px;gap:12px;border-radius:18px}
+.avatar{width:60px;height:60px;border-radius:50%;object-fit:cover;box-shadow:0 6px 16px -8px rgba(0,0,0,.6)}
 .welcome h1{font-size:21px}.welcome p{font-size:14px;margin-top:1px}
 .nextexam{margin-top:8px;padding:8px 12px}
 .nextexam b{font-size:15px}.nextexam small{font-size:12px}
@@ -1088,7 +1088,7 @@ const ICONS = {
 };
 const ico = (n) => '<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + ICONS[n] + '</svg>';
 const ILLU = '<svg class="illu" viewBox="0 0 58 44" fill="none" aria-hidden="true"><path d="M6 16 29 4l23 12z" fill="rgba(255,165,46,.18)" stroke="#FFA52E" stroke-width="2" stroke-linejoin="round"/><path d="M11 20v15M20 20v15M29 20v15M38 20v15M47 20v15" stroke="#9DAED4" stroke-width="2.4" stroke-linecap="round"/><path d="M4 39h50" stroke="#9DAED4" stroke-width="2.4" stroke-linecap="round"/><circle cx="29" cy="11" r="2" fill="#FFA52E"/></svg>';
-const AVATAR = '<svg class="avatar" viewBox="0 0 58 58" aria-hidden="true"><defs><linearGradient id="avg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFB955"/><stop offset="1" stop-color="#FF7A45"/></linearGradient><clipPath id="avc"><circle cx="29" cy="29" r="29"/></clipPath></defs><circle cx="29" cy="29" r="29" fill="url(#avg)"/><g clip-path="url(#avc)"><path d="M14 36c-2-13 5-21 15-21s17 8 15 21c-1 6-3 9-5 11H19c-2-2-4-5-5-11z" fill="#3A2418"/><path d="M10 62c1-12 9-17 19-17s18 5 19 17z" fill="#101A38"/><circle cx="29" cy="31" r="9.5" fill="#F6D2B5"/><path d="M19.4 29c2-6.5 6-9 9.6-9s7.6 2.5 9.6 9c-4.5-3.5-14.5-3.5-19.2 0z" fill="#3A2418"/></g><path d="M29 7 13 14l16 7 16-7z" fill="#101A38"/><path d="M42 15.5v7" stroke="#101A38" stroke-width="2" stroke-linecap="round"/><circle cx="42" cy="23.5" r="2" fill="#FFA52E"/></svg>';
+const AVATAR = '<img class="avatar" src="img/marcy.webp" alt="" width="96" height="96">';
 
 /* Statistiche reali: tutte le domande dei panieri e delle lezioni caricate. */
 function totals(list){
