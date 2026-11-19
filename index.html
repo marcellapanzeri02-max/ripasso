@@ -322,9 +322,9 @@ input[type=date]{width:100%;font:inherit;color:var(--ink);background:var(--paper
 .panel .ptop{font-size:15px}.panel .ptop b{font-size:18px}
 .panel .bar{height:8px;margin-top:6px}
 .panel small{font-size:12px;margin-top:5px}
-.shead{font-size:16px;margin:14px 0 8px}
+.shead{font-size:16px;margin:11px 0 7px}
 .years{gap:6px}
-.ycard{min-height:128px;padding:10px 9px;border-radius:16px}
+.ycard{min-height:120px;padding:9px 9px;border-radius:16px}
 .ycard .yic{width:28px;height:28px;border-radius:9px}.ycard .yic .ico{width:16px;height:16px}
 .ycard .yno{font-size:22px}
 .ycard .yname{font-size:13px;margin-top:6px}
@@ -335,6 +335,17 @@ input[type=date]{width:100%;font:inherit;color:var(--ink);background:var(--paper
 .qbtn .qi{width:34px;height:34px;border-radius:11px}.qbtn .qi .ico{width:19px;height:19px}
 #nav{padding-top:4px}
 #nav button{padding:6px 0 4px}
+/* due esami affiancati */
+.exams2{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px}
+.exams2 .nextexam{margin:0;display:flex;flex-direction:column;align-items:stretch;gap:3px;padding:8px 10px;min-width:0}
+.exams2 .nxtop{display:flex;align-items:center;gap:6px}
+.exams2 .nxtop .ico{width:16px;height:16px}
+.exams2 .nextexam b{font-size:14px;line-height:1.2;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.exams2 .nxbot{display:flex;justify-content:space-between;align-items:baseline;gap:6px;margin-top:auto}
+.exams2 .nextexam em{margin:0;font-size:13px;white-space:nowrap}
+.exams2 .nxbot small{white-space:nowrap}
+.exams2 .nextexam.add{background:transparent;border-style:dashed;border-color:var(--line)}
+.exams2 .nextexam.add b{color:var(--muted)}
 </style>
 </head>
 <body>
@@ -1018,14 +1029,14 @@ const today0 = () => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; }
 const daysTo = (iso) => Math.round((new Date(iso + 'T00:00:00') - today0()) / DAY);
 const fmtDate = (iso) => new Date(iso + 'T00:00:00').toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' });
 const inDays = (d) => d === 0 ? 'oggi' : d === 1 ? 'domani' : 'tra ' + d + ' giorni';
-function nextExam(){
-  return topPacks().filter(p => p.examDate && !p.examDone && daysTo(p.examDate) >= 0).sort((a, b) => a.examDate.localeCompare(b.examDate))[0] || null;
+function nextExams(){
+  return topPacks().filter(p => p.examDate && !p.examDone && daysTo(p.examDate) >= 0).sort((a, b) => a.examDate.localeCompare(b.examDate));
 }
 /* Lezioni di una materia (per le materie divise in parti: tutte le lezioni delle parti). */
 const lessonPairs = (p) => (isContainer(p) ? unitsOf(p) : [p]).flatMap(u => lessonNums(u).map(n => [u, n]));
 
 function vHome(){
-  const tops = topPacks(), all = totals(S.packs), ne = nextExam();
+  const tops = topPacks(), all = totals(S.packs), ne = nextExams().slice(0, 2);
   const YICON = ['book', 'cal', 'cap'];
   const years = YEARS.map((label, i) => {
     const y = i + 1, packs = packsOfYear(y), t = totals(allOfYear(y));
@@ -1042,7 +1053,8 @@ function vHome(){
   return '<header class="hd"><span class="logo">' + ico('cap') + '</span><div class="brand"><b>MARCY</b><span>Back to University</span></div>' + ILLU
     + '<button class="iconbtn" data-act="settings" aria-label="Impostazioni">' + ico('gear') + '</button></header>'
     + '<section class="welcome">' + AVATAR + '<div><h1>Ciao Marcy!</h1><p>Il tuo percorso universitario</p></div></section>'
-    + (ne ? '<button class="nextexam" data-act="exams">' + ico('cal') + '<span><small>Prossimo esame</small><b>' + esc(ne.name) + '</b><small>' + fmtDate(ne.examDate) + '</small></span><em>' + inDays(daysTo(ne.examDate)) + '</em></button>' : '')
+    + (ne.length ? '<div class="exams2">' + ne.map((p, i) => '<button class="nextexam" style="--c:' + subColor(p) + '" data-act="exams"><span class="nxtop">' + ico('cal') + '<small>' + (i ? 'Esame successivo' : 'Prossimo esame') + '</small></span><b>' + esc(p.name) + '</b><span class="nxbot"><small>' + new Date(p.examDate + 'T00:00:00').toLocaleDateString('it-IT', { day: 'numeric', month: 'short', year: 'numeric' }) + '</small><em>' + inDays(daysTo(p.examDate)) + '</em></span></button>').join('')
+      + (ne.length < 2 ? '<button class="nextexam add" data-act="exams"><span class="nxtop">' + ico('cal') + '<small>Secondo esame</small></span><b>Aggiungi una data</b><span class="nxbot"><small>Dalla sezione Esami</small></span></button>' : '') + '</div>' : '')
     + '<div class="kpis">'
     + '<div class="kpi">' + ico('layers') + '<b>' + tops.length + '</b><span>Materie</span></div>'
     + '<div class="kpi">' + ico('help') + '<b>' + all.total + '</b><span>Domande</span></div>'
