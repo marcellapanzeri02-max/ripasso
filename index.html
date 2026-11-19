@@ -170,6 +170,10 @@ input[type=password],input[type=search]{width:100%;font:inherit;color:var(--ink)
 .timer{font-variant-numeric:tabular-nums;color:var(--ink)}
 .timer.low{color:var(--bad)}
 .donebox{margin-top:18px}
+.pack.faded{opacity:.45}
+.exambox{margin-top:16px;padding:16px 18px;border:2px solid var(--ink);border-radius:18px;background:var(--card)}
+.exambox p{margin:0 0 12px}
+.exambox.done{border-color:var(--line)}
 .donebox summary{font-size:18px}
 .tabs.three{grid-template-columns:repeat(3,1fr);gap:8px}
 .tabs.three button{padding:10px 10px}
@@ -865,8 +869,8 @@ function unitCard(p){
   const pct = items ? Math.round(learned / items * 100) : 0;
   const kind = isContainer(p) ? fam.length + ' parti' : (items ? '' : 'Da caricare');
   const meta = items ? `${nq} ${nq === 1 ? 'domanda' : 'domande'} · ${nt} ${nt === 1 ? 'termine' : 'termini'}, ${pct}% imparato` : 'Ancora vuota';
-  return `<button class="pack" data-act="open" data-arg="${p.id}">
-      ${kind ? `<span class="pack-kind">${kind}</span>` : ''}
+  return `<button class="pack${p.examDone ? ' faded' : ''}" data-act="open" data-arg="${p.id}">
+      ${p.examDone ? '<span class="pack-kind">✓ Esame dato</span>' : kind ? `<span class="pack-kind">${kind}</span>` : ''}
       <span class="pack-name">${esc(p.name)}</span>
       <span class="pack-meta">${meta}</span>
       <span class="bar"><span style="width:${pct}%"></span></span></button>`;
@@ -899,6 +903,11 @@ function vSubject(p){
     <button role="radio" aria-checked="${S.part === 'lessons'}" data-act="part" data-arg="lessons">Lezioni<small>${lessons.length} lezioni</small></button>
     <button role="radio" aria-checked="${S.part === 'quiz'}" data-act="part" data-arg="quiz">Paniere<small>${units.length} parti</small></button>
   </div>`;
+  /* tutte le lezioni fatte: si chiede se l'esame è stato dato (a ogni rientro, finché la risposta è no) */
+  const allDone = lessons.length > 0 && lessons.every(([u, n]) => lessonProgress(u, n).done);
+  const exam = p.examDone ? `<div class="exambox done"><p><b>✓ Esame dato.</b> Puoi comunque rivedere le lezioni.</p><button class="link" data-act="examundo">Non l’ho ancora dato</button></div>`
+    : allDone && S.examNo !== p.id ? `<div class="exambox"><p><b>ESAME DATO?</b> Hai completato tutte le lezioni.</p>
+      <div class="row"><button class="btn primary" data-act="examyes">Sì, l’ho dato</button><button class="btn ghost" data-act="examno">No, non ancora</button></div></div>` : '';
   const rev = reviewItems(p);
   const foot = `<div class="modes" style="margin-top:26px">
     <button class="mode primary" data-act="review" ${rev.items.length ? '' : 'disabled'}><b>Quiz su tutte le lezioni studiate</b><span>${rev.items.length ? `${rev.items.length} domande dalle ${rev.lessons} lezioni fatte, in ordine casuale` : 'Completa almeno una lezione per sbloccarlo'}</span></button>
@@ -918,10 +927,11 @@ function vSubject(p){
       <span class="pack-kind">${u.qs.length ? `${u.qs.length} domande · ${pct}% imparate` : 'Domande in arrivo'}</span>
       ${u.qs.length ? `<span class="bar"><span style="width:${pct}%"></span></span>` : ''}</button>`;
   }).join('')}</div>`;
-  return head + body + foot;
+  return head + exam + body + foot;
 }
 
 function vYear(){
+  S.examNo = null;
   const y = S.year, packs = packsOfYear(y).sort(byPriority);
   const list = packs.map(p => {
     if (isContainer(p)) return unitCard(p, 'open');
@@ -1582,6 +1592,9 @@ const H = {
   settings(){ S.keyMsg = ''; S.view = 'settings'; render(); },
   add(){ const f = S.add; S.add = blankAdd({ year: S.year, kind: f.kind, reader: f.reader, n: f.n, qtype: f.qtype }); S.view = 'add'; render(); },
   addto(){ const f = S.add; S.add = blankAdd({ kind: f.kind, reader: f.reader, n: f.n, qtype: f.qtype, target: S.pid }); S.view = 'add'; render(); },
+  examyes(){ const p = packOf(S.pid); if (!p) return; p.examDone = true; savePack(p); toast('Esame segnato come dato'); render(); },
+  examno(){ S.examNo = S.pid; render(); },
+  examundo(){ const p = packOf(S.pid); if (!p) return; p.examDone = false; savePack(p); render(); },
   open(id){
     if (id !== S.pid){ const p = packOf(id); S.part = p && isContainer(p) ? 'lessons' : (p && (p.glossary || []).length ? 'gloss' : 'quiz'); S.gles = ''; }
     S.pid = id; S.session = null; S.edit = null; S.ans = null; S.gadd = null; S.gedit = null; S.view = 'pack'; render();
