@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Marcy back to university</title>
 <meta name="description" content="Carica i panieri delle tue materie, con le risposte, e studia con i quiz.">
-<meta name="theme-color" content="#17203A">
+<meta name="theme-color" content="#101A38">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
@@ -20,26 +20,16 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"></script>
 <style>
 :root{
-  --paper:#EEF1F6;--card:#FFFFFF;--ink:#17203A;--muted:#5A6580;--line:#D3DAE6;
-  --orange:#E2711D;--hl:#F6D64A;--hl-ink:#17203A;--ok:#1F7A58;--ok-bg:#DCF0E6;--bad:#B3343F;--bad-bg:#F8E0E2;--accent:#2B3FA8;
-  box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
-  color-scheme:light;
-}
-@media (prefers-color-scheme:dark){
-  :root:not([data-theme="light"]){
-    --paper:#0F1424;--card:#182039;--ink:#E6EAF4;--muted:#9AA5BF;--line:#2B3554;
-    --orange:#FF9B42;--hl:#E9C93A;--hl-ink:#17203A;--ok:#63CFA3;--ok-bg:#163A2E;--bad:#F2838D;--bad-bg:#3E1F27;--accent:#93A6FF;color-scheme:dark;
-  }
-}
-:root[data-theme="dark"]{
-  --paper:#0F1424;--card:#182039;--ink:#E6EAF4;--muted:#9AA5BF;--line:#2B3554;
-  --orange:#FF9B42;--hl:#E9C93A;--hl-ink:#17203A;--ok:#63CFA3;--ok-bg:#163A2E;--bad:#F2838D;--bad-bg:#3E1F27;--accent:#93A6FF;color-scheme:dark;
+  --paper:#101A38;--card:#16234B;--card2:#1C2C5C;--ink:#F3F6FF;--muted:#9DAED4;--line:#263A6E;
+  --orange:#FFA52E;--hl:#FFA52E;--hl-ink:#101A38;--ok:#4FD1A5;--ok-bg:#123A38;--bad:#FF8A95;--bad-bg:#3D1E30;--accent:#8FB3FF;
+  box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);
+  color-scheme:dark;
 }
 *,*::before,*::after{box-sizing:inherit}
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
-body{margin:0;background:var(--paper);color:var(--ink);font:17px/1.55 "Atkinson Hyperlegible",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-text-size-adjust:100%}
+body{margin:0;background:radial-gradient(900px 520px at 110% -8%,rgba(8,103,217,.28),transparent 62%),radial-gradient(760px 480px at -20% 18%,rgba(117,37,201,.16),transparent 60%),var(--paper);background-color:var(--paper);min-height:100vh;color:var(--ink);font:17px/1.55 "Atkinson Hyperlegible",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-text-size-adjust:100%}
 h1,h2,h3{font-family:"Nunito","Atkinson Hyperlegible",system-ui,sans-serif;margin:0;line-height:1.15}
-#app{max-width:640px;margin:0 auto;padding:22px 18px 64px}
+#app{max-width:640px;margin:0 auto;padding:18px 16px calc(104px + env(safe-area-inset-bottom,0px))}
 button{font:inherit;color:inherit}
 :focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-radius:10px}
 
@@ -162,7 +152,7 @@ textarea{resize:vertical;min-height:110px}
 .yours{color:var(--bad);font-size:15px}
 .hlt{color:var(--hl-ink);background:var(--hl);padding:0 .15em;-webkit-box-decoration-break:clone;box-decoration-break:clone}
 
-#toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%) translateY(20px);background:var(--ink);color:var(--paper);padding:12px 18px;border-radius:12px;font-size:15px;opacity:0;pointer-events:none;transition:.25s;max-width:calc(100% - 32px);text-align:center;z-index:10}
+#toast{position:fixed;left:50%;bottom:calc(86px + env(safe-area-inset-bottom,0px));transform:translateX(-50%) translateY(20px);background:var(--ink);color:var(--paper);padding:12px 18px;border-radius:12px;font-size:15px;opacity:0;pointer-events:none;transition:.25s;max-width:calc(100% - 32px);text-align:center;z-index:10}
 #toast.on{opacity:1;transform:translateX(-50%)}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 @media (max-width:420px){.stats b{font-size:21px}.stats span{font-size:12px}}
@@ -226,10 +216,96 @@ input[type=password],input[type=search]{width:100%;font:inherit;color:var(--ink)
 .gterm dd{margin:2px 0 4px}
 #g-search{margin-bottom:4px}
 .mini{font-size:14px;margin-left:4px;vertical-align:middle;white-space:nowrap}
+
+/* ---- redesign ---- */
+.btn.primary{background:var(--orange);border-color:var(--orange);color:#101A38}
+.btn,.mode,.pack,.qbtn,.ycard,.iconbtn,#nav button{-webkit-tap-highlight-color:transparent}
+.btn:active,.mode:active,.iconbtn:active{transform:scale(.97)}
+.btn,.mode{transition:transform .15s ease,background .15s ease}
+.enter>*{animation:fadeUp .28s cubic-bezier(.2,.7,.2,1) both}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}}
+.enter .bar>span{animation:grow .8s cubic-bezier(.2,.7,.2,1) .1s both}
+@keyframes grow{from{width:0}}
+.ico{width:22px;height:22px;flex:none}
+.hd{display:flex;align-items:center;gap:12px;margin:2px 0 16px}
+.logo{width:46px;height:46px;border-radius:14px;flex:none;background:linear-gradient(135deg,#FFB955,#FF8A1F);display:grid;place-items:center;color:#101A38;box-shadow:0 10px 22px -12px #FFA52E}
+.logo .ico{width:28px;height:28px}
+.brand b{display:block;font:900 25px/1 "Nunito",system-ui,sans-serif;letter-spacing:.08em}
+.brand span{display:block;font:800 13px/1.2 "Nunito",system-ui,sans-serif;color:var(--orange);letter-spacing:.05em;margin-top:4px}
+.hd .illu{margin-left:auto;width:58px;height:44px;flex:none}
+.iconbtn{width:44px;height:44px;border-radius:14px;border:1px solid var(--line);background:var(--card);color:var(--ink);display:grid;place-items:center;cursor:pointer;flex:none;transition:transform .15s}
+.welcome{display:flex;align-items:center;gap:14px;padding:14px 16px;border-radius:20px;background:linear-gradient(135deg,var(--card2),var(--card));border:1px solid var(--line)}
+.avatar{width:58px;height:58px;flex:none}
+.welcome h1{font:900 24px/1.1 "Nunito",system-ui,sans-serif}
+.welcome p{margin:3px 0 0;color:var(--muted);font-size:15px}
+.nextexam{display:flex;align-items:center;gap:12px;margin-top:10px;padding:12px 14px;border-radius:16px;background:linear-gradient(135deg,rgba(255,165,46,.18),rgba(255,165,46,.06));border:1px solid rgba(255,165,46,.4);width:100%;text-align:left;color:var(--ink);cursor:pointer}
+.nextexam .ico{color:var(--orange)}
+.nextexam small{display:block;color:var(--muted);font-size:13px}
+.nextexam b{display:block;font:800 16px/1.25 "Nunito",system-ui,sans-serif}
+.nextexam em{margin-left:auto;font:900 15px/1.1 "Nunito",system-ui,sans-serif;font-style:normal;color:var(--orange);text-align:right;flex:none}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:12px 0}
+.kpi{border:1px solid var(--line);border-radius:16px;padding:11px 4px 10px;text-align:center;background:var(--card)}
+.kpi:nth-child(2){background:#172752}.kpi:nth-child(3){background:#182a58}.kpi:nth-child(4){background:#1a2d5e}
+.kpi .ico{width:20px;height:20px;color:var(--orange)}
+.kpi b{display:block;font:900 21px/1.15 "Nunito",system-ui,sans-serif;margin-top:4px}
+.kpi span{display:block;font-size:11.5px;line-height:1.2;color:var(--muted)}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px 16px}
+.panel .ptop{display:flex;justify-content:space-between;align-items:baseline;font:800 16px "Nunito",system-ui,sans-serif}
+.panel .ptop b{color:var(--orange);font-size:21px}
+.panel .bar{height:10px;background:#2A3C70;margin-top:10px}
+.panel .bar>span{background:linear-gradient(90deg,#FF8A1F,#FFB955)}
+.panel small{display:block;color:var(--muted);font-size:13px;margin-top:8px}
+.shead{display:flex;align-items:center;justify-content:space-between;font:800 18px/1.2 "Nunito",system-ui,sans-serif;margin:22px 0 10px}
+.years{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.ycard{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-width:0;text-align:left;padding:12px 10px;border-radius:18px;border:1px solid rgba(255,255,255,.12);background:linear-gradient(160deg,var(--c),color-mix(in srgb,var(--c) 58%,#0a1030));color:#fff;cursor:pointer;min-height:156px;box-shadow:0 14px 26px -18px var(--c);transition:transform .15s ease,filter .15s ease}
+.ycard:active{transform:scale(.96);filter:brightness(1.08)}
+.ycard .yic{width:32px;height:32px;border-radius:10px;background:rgba(255,255,255,.18);display:grid;place-items:center}
+.ycard .yic .ico{width:18px;height:18px}
+.ycard .yno{position:absolute;top:8px;right:10px;font:900 26px/1 "Nunito",system-ui,sans-serif;opacity:.3}
+.ycard .yname{font:900 14px/1.1 "Nunito",system-ui,sans-serif;letter-spacing:.03em;margin-top:8px}
+.ycard .ymeta{font-size:12px;line-height:1.35;opacity:.86}
+.ycard .ypct{font:900 19px/1 "Nunito",system-ui,sans-serif;margin-top:auto;padding-top:6px}
+.ycard .bar{width:100%;height:6px;background:rgba(255,255,255,.22);margin-top:5px}
+.ycard .bar>span{background:#FFC46B}
+.quick{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.qbtn{display:grid;justify-items:center;gap:7px;padding:12px 4px 11px;border-radius:16px;background:var(--card);border:1px solid var(--line);color:var(--ink);font:800 12.5px/1.15 "Nunito",system-ui,sans-serif;cursor:pointer;text-align:center;transition:transform .15s ease,background .15s ease}
+.qbtn .qi{width:40px;height:40px;border-radius:13px;display:grid;place-items:center;background:color-mix(in srgb,var(--q) 20%,transparent);color:var(--q)}
+.qbtn:active{transform:scale(.94);background:var(--card2)}
+.slist{display:grid;gap:10px}
+.scard{display:grid;gap:6px;padding:14px 16px;border-radius:18px;background:color-mix(in srgb,var(--c) 9%,var(--card));border:1px solid color-mix(in srgb,var(--c) 28%,var(--line));border-left:6px solid var(--c)}
+.scard h3{font:800 17px/1.2 "Nunito",system-ui,sans-serif}
+.scard .meta{color:var(--muted);font-size:14px;margin:0}
+.scard .row{margin-top:6px}
+.scard .btn{min-height:44px;font-size:15px}
+.ygroup{display:flex;align-items:center;gap:8px;font:800 15px "Nunito",system-ui,sans-serif;color:var(--muted);margin:20px 0 10px;letter-spacing:.04em}
+.ygroup i{width:10px;height:10px;border-radius:50%;background:var(--c)}
+.nextl{display:flex;align-items:center;gap:12px;width:100%;text-align:left;padding:12px 14px;border-radius:14px;border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer;transition:transform .15s}
+.nextl:active{transform:scale(.98)}
+.nextl b{display:block;font:800 16px "Nunito",system-ui,sans-serif}
+.nextl small{display:block;color:var(--muted);font-size:13px}
+.nextl .ico{margin-left:auto;color:var(--c)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.mini-stat{background:rgba(255,255,255,.04);border-radius:12px;padding:8px 10px}
+.mini-stat b{display:block;font:900 18px "Nunito",system-ui,sans-serif}
+.mini-stat span{font-size:12.5px;color:var(--muted)}
+input[type=date]{width:100%;font:inherit;color:var(--ink);background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:10px 12px;min-height:46px}
+.datefield{display:grid;gap:4px;font-size:14px;color:var(--muted);font-weight:700}
+.plan{font-size:15px;margin:2px 0 0}
+.plan b{color:var(--orange)}
+#nav{position:fixed;left:0;right:0;bottom:0;z-index:9;display:grid;grid-template-columns:repeat(5,1fr);max-width:640px;margin:0 auto;padding:6px 6px calc(6px + env(safe-area-inset-bottom,0px));background:rgba(16,26,56,.9);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);border-top:1px solid var(--line)}
+@media (min-width:641px){#nav{border:1px solid var(--line);border-bottom:0;border-radius:20px 20px 0 0}}
+#nav[hidden]{display:none}
+#nav button{position:relative;display:grid;justify-items:center;gap:4px;padding:7px 0 5px;background:none;border:0;color:var(--muted);font:800 11px/1 "Nunito",system-ui,sans-serif;cursor:pointer;transition:color .15s}
+#nav button .ico{width:23px;height:23px;transition:transform .15s}
+#nav button:active .ico{transform:scale(.88)}
+#nav button[aria-current="page"]{color:var(--orange)}
+#nav button[aria-current="page"]::before{content:"";position:absolute;top:-7px;width:28px;height:3px;border-radius:0 0 3px 3px;background:var(--orange)}
+@media (max-width:360px){.kpi b{font-size:18px}.kpi span{font-size:10.5px}.qbtn{font-size:11px}.ycard .yname{font-size:12.5px}}
 </style>
 </head>
 <body>
 <main id="app" aria-live="polite"></main>
+<nav id="nav" aria-label="Navigazione principale"></nav>
 <div id="toast" role="status"></div>
 <script>
 (() => {
@@ -275,9 +351,9 @@ const FIRST = ['LINGUISTICA GENERALE'];
 const rank = (p) => { const i = FIRST.indexOf(p.name.trim().toUpperCase()); return i < 0 ? FIRST.length : i; };
 /* Colori: ogni anno una famiglia (1° blu, 2° verde, 3° viola), ogni materia una sua tonalità. */
 const PALETTE = {
-  1: { year: '#1C3170', subs: ['#2F5BEA', '#1AA3E0', '#0E8BA6', '#8A7CF8', '#3D7BC4', '#38B6F2'] },
-  2: { year: '#155E3B', subs: ['#16A34A', '#0D9488', '#65A30D', '#059669', '#22A6A0', '#4D9F2C'] },
-  3: { year: '#4C1D95', subs: ['#7C3AED', '#C026D3', '#9D4EDD', '#DB2777', '#6D5BD0', '#B45CC9'] }
+  1: { year: '#0867D9', subs: ['#2F5BEA', '#1AA3E0', '#0E8BA6', '#8A7CF8', '#3D7BC4', '#38B6F2'] },
+  2: { year: '#078F75', subs: ['#16A34A', '#0D9488', '#65A30D', '#059669', '#22A6A0', '#4D9F2C'] },
+  3: { year: '#7525C9', subs: ['#7C3AED', '#C026D3', '#9D4EDD', '#DB2777', '#6D5BD0', '#B45CC9'] }
 };
 const yearColor = (y) => (PALETTE[y] || PALETTE[1]).year;
 function subColor(p){
@@ -875,25 +951,174 @@ const fileDrop = (id, files, empty, accept) => `<label class="drop ${files.lengt
     ${files.length ? files.map(x => esc(x.name)).join('<br>') : empty}</label>`;
 const ACCEPT = 'application/pdf,.pdf,text/plain,.txt,.md,.csv';
 
+/* ---------- icone (tratto, 24×24) ---------- */
+const ICONS = {
+  home: '<path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',
+  layers: '<path d="m12 2 10 5-10 5L2 7z"/><path d="m2 17 10 5 10-5"/><path d="m2 12 10 5 10-5"/>',
+  open: '<path d="M2 4h7a3 3 0 0 1 3 3v14a2 2 0 0 0-2-2H2z"/><path d="M22 4h-7a3 3 0 0 0-3 3v14a2 2 0 0 1 2-2h8z"/>',
+  chart: '<path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 5-6"/>',
+  cap: '<path d="M22 10 12 5 2 10l10 5z"/><path d="M6 12v5c3 2 9 2 12 0v-5"/><path d="M22 10v6"/>',
+  book: '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/>',
+  cal: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',
+  gear: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
+  help: '<circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3"/><path d="M12 17h.01"/>',
+  check: '<circle cx="12" cy="12" r="10"/><path d="m8 12 3 3 5-6"/>',
+  target: '<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>',
+  repeat: '<path d="m17 2 4 4-4 4"/><path d="M3 11V9a3 3 0 0 1 3-3h15"/><path d="m7 22-4-4 4-4"/><path d="M21 13v2a3 3 0 0 1-3 3H3"/>',
+  sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+  plan: '<path d="m3 6 2 2 3-3M3 13l2 2 3-3M11 6h10M11 13h10M11 20h10"/>',
+  next: '<path d="m9 18 6-6-6-6"/>'
+};
+const ico = (n) => '<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + ICONS[n] + '</svg>';
+const ILLU = '<svg class="illu" viewBox="0 0 58 44" fill="none" aria-hidden="true"><path d="M6 16 29 4l23 12z" fill="rgba(255,165,46,.18)" stroke="#FFA52E" stroke-width="2" stroke-linejoin="round"/><path d="M11 20v15M20 20v15M29 20v15M38 20v15M47 20v15" stroke="#9DAED4" stroke-width="2.4" stroke-linecap="round"/><path d="M4 39h50" stroke="#9DAED4" stroke-width="2.4" stroke-linecap="round"/><circle cx="29" cy="11" r="2" fill="#FFA52E"/></svg>';
+const AVATAR = '<svg class="avatar" viewBox="0 0 58 58" aria-hidden="true"><defs><linearGradient id="avg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFB955"/><stop offset="1" stop-color="#FF7A45"/></linearGradient><clipPath id="avc"><circle cx="29" cy="29" r="29"/></clipPath></defs><circle cx="29" cy="29" r="29" fill="url(#avg)"/><g clip-path="url(#avc)"><path d="M14 36c-2-13 5-21 15-21s17 8 15 21c-1 6-3 9-5 11H19c-2-2-4-5-5-11z" fill="#3A2418"/><path d="M10 62c1-12 9-17 19-17s18 5 19 17z" fill="#101A38"/><circle cx="29" cy="31" r="9.5" fill="#F6D2B5"/><path d="M19.4 29c2-6.5 6-9 9.6-9s7.6 2.5 9.6 9c-4.5-3.5-14.5-3.5-19.2 0z" fill="#3A2418"/></g><path d="M29 7 13 14l16 7 16-7z" fill="#101A38"/><path d="M42 15.5v7" stroke="#101A38" stroke-width="2" stroke-linecap="round"/><circle cx="42" cy="23.5" r="2" fill="#FFA52E"/></svg>';
+
+/* Statistiche reali: tutte le domande dei panieri e delle lezioni caricate. */
+function totals(list){
+  const total = list.reduce((n, p) => n + p.qs.length, 0), learned = list.reduce((n, p) => n + stats(p).learned, 0);
+  return { total, learned, pct: total ? Math.round(learned / total * 100) : 0 };
+}
+const topPacks = () => S.packs.filter(p => !p.parent);
+const DAY = 86400000;
+const today0 = () => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; };
+const daysTo = (iso) => Math.round((new Date(iso + 'T00:00:00') - today0()) / DAY);
+const fmtDate = (iso) => new Date(iso + 'T00:00:00').toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' });
+const inDays = (d) => d === 0 ? 'oggi' : d === 1 ? 'domani' : 'tra ' + d + ' giorni';
+function nextExam(){
+  return topPacks().filter(p => p.examDate && !p.examDone && daysTo(p.examDate) >= 0).sort((a, b) => a.examDate.localeCompare(b.examDate))[0] || null;
+}
+/* Lezioni di una materia (per le materie divise in parti: tutte le lezioni delle parti). */
+const lessonPairs = (p) => (isContainer(p) ? unitsOf(p) : [p]).flatMap(u => lessonNums(u).map(n => [u, n]));
+
 function vHome(){
-  const cards = YEARS.map((label, i) => {
-    const y = i + 1, packs = packsOfYear(y), every = allOfYear(y);
-    const total = every.reduce((n, p) => n + p.qs.length, 0);
-    const learned = every.reduce((n, p) => n + stats(p).learned, 0);
-    const pct = total ? Math.round(learned / total * 100) : 0;
-    return `<button class="pack year" style="--c:${yearColor(y)}" data-act="year" data-arg="${y}">
-      <span class="badge">${y}°</span>
-      <span class="pack-name">${label}</span>
-      <span class="pack-meta">${packs.length ? `${packs.length} ${packs.length === 1 ? 'materia' : 'materie'}, ${total} ${total === 1 ? 'domanda' : 'domande'}, ${pct}% imparate` : 'Nessuna materia'}</span>
-      <span class="bar"><span style="width:${pct}%"></span></span></button>`;
+  const tops = topPacks(), all = totals(S.packs), ne = nextExam();
+  const YICON = ['book', 'cal', 'cap'];
+  const years = YEARS.map((label, i) => {
+    const y = i + 1, packs = packsOfYear(y), t = totals(allOfYear(y));
+    return '<button class="ycard" style="--c:' + yearColor(y) + '" data-act="year" data-arg="' + y + '" aria-label="' + label + '">'
+      + '<span class="yic">' + ico(YICON[i]) + '</span><span class="yno">' + y + '°</span>'
+      + '<span class="yname">' + label.replace('ESAMI ', '') + '</span>'
+      + (packs.length
+        ? '<span class="ymeta">' + packs.length + ' ' + (packs.length === 1 ? 'materia' : 'materie') + '<br>' + t.total + ' ' + (t.total === 1 ? 'domanda' : 'domande') + '</span><span class="ypct">' + t.pct + '%</span><span class="bar"><span style="width:' + t.pct + '%"></span></span>'
+        : '<span class="ymeta">Nessuna materia</span>')
+      + '</button>';
   }).join('');
-  return `<div class="toprow"><button class="link" data-act="settings">Impostazioni</button></div>
-    <header class="hero"><h1><span class="mark">Marcy</span><span class="sub">back to university</span></h1>
-    <p class="lede">Carica i panieri delle tue materie, anche con il file delle risposte: ti faccio le domande finché non le sai.</p></header>
-    <div class="packs">${cards}</div>
-    ${mode === 'memory' ? '<p class="note">Questo browser non permette di salvare: chiudendo l’app i materiali si perdono.</p>' : ''}`;
+  const quick = [['study', 'sun', 'Studio oggi', '#FFA52E'], ['ripasso', 'repeat', 'Ripasso', '#4FD1A5'], ['progress', 'chart', 'Statistiche', '#8FB3FF'], ['exams', 'plan', 'Piano di studio', '#C58CFF']]
+    .map(([act, ic, label, c]) => '<button class="qbtn" style="--q:' + c + '" data-act="' + act + '"><span class="qi">' + ico(ic) + '</span>' + label + '</button>').join('');
+  return '<header class="hd"><span class="logo">' + ico('cap') + '</span><div class="brand"><b>MARCY</b><span>Back to University</span></div>' + ILLU
+    + '<button class="iconbtn" data-act="settings" aria-label="Impostazioni">' + ico('gear') + '</button></header>'
+    + '<section class="welcome">' + AVATAR + '<div><h1>Ciao Marcy!</h1><p>Il tuo percorso universitario</p></div></section>'
+    + (ne ? '<button class="nextexam" data-act="exams">' + ico('cal') + '<span><small>Prossimo esame</small><b>' + esc(ne.name) + '</b><small>' + fmtDate(ne.examDate) + '</small></span><em>' + inDays(daysTo(ne.examDate)) + '</em></button>' : '')
+    + '<div class="kpis">'
+    + '<div class="kpi">' + ico('layers') + '<b>' + tops.length + '</b><span>Materie</span></div>'
+    + '<div class="kpi">' + ico('help') + '<b>' + all.total + '</b><span>Domande</span></div>'
+    + '<div class="kpi">' + ico('check') + '<b>' + all.learned + '</b><span>Imparate</span></div>'
+    + '<div class="kpi">' + ico('target') + '<b>' + all.pct + '%</b><span>Completato</span></div></div>'
+    + '<section class="panel"><div class="ptop">Progresso complessivo<b>' + all.pct + '%</b></div><span class="bar"><span style="width:' + all.pct + '%"></span></span>'
+    + '<small>' + all.learned + ' domande imparate su ' + all.total + '</small></section>'
+    + '<h2 class="shead">I tuoi esami</h2><div class="years">' + years + '</div>'
+    + '<h2 class="shead">Accessi rapidi</h2><div class="quick">' + quick + '</div>'
+    + (mode === 'memory' ? '<p class="note">Questo browser non permette di salvare: chiudendo l’app i materiali si perdono.</p>' : '');
 }
 
+/* Tutte le materie, divise per anno. */
+function vSubjects(){
+  const groups = YEARS.map((label, i) => {
+    const packs = packsOfYear(i + 1).sort(byPriority);
+    if (!packs.length) return '';
+    return '<div class="ygroup" style="--c:' + yearColor(i + 1) + '"><i></i>' + label + '</div><div class="packs">' + packs.map(subjCard).join('') + '</div>';
+  }).join('');
+  return '<h2 class="title">Materie</h2>' + (groups || '<div class="empty">Ancora nessuna materia. Apri un anno da «Home» per crearne una.</div>');
+}
+
+/* Studio: la prossima lezione da fare di ogni materia, poi il ripasso delle lezioni fatte. */
+function vStudy(){
+  const tops = topPacks().filter(p => !p.examDone).sort(byPriority);
+  const cards = tops.map(p => {
+    const pairs = lessonPairs(p); if (!pairs.length) return '';
+    const done = pairs.filter(([u, n]) => lessonProgress(u, n).done).length, nx = pairs.find(([u, n]) => !lessonProgress(u, n).done);
+    const pct = Math.round(done / pairs.length * 100);
+    let row;
+    if (nx){ const [u, n] = nx, L = pretestOf(u, n); row = '<button class="nextl" data-act="golesson" data-arg="' + p.id + '|' + u.id + ':' + n + '"><span><b>Lezione ' + n + '</b><small>' + (L && L.title ? esc(L.title) : 'Prossima lezione da fare') + '</small></span>' + ico('next') + '</button>'; }
+    else row = '<p class="meta">Hai completato tutte le lezioni.</p>';
+    return '<div class="scard" style="--c:' + subColor(p) + '"><h3>' + esc(p.name) + '</h3><span class="meta">' + done + ' di ' + pairs.length + ' lezioni fatte</span><span class="bar"><span style="width:' + pct + '%"></span></span>' + row + '</div>';
+  }).join('');
+  const rev = tops.map(p => {
+    const r = reviewItems(p), n = paniereItems(p).length;
+    if (!r.items.length && !n) return '';
+    return '<div class="scard" style="--c:' + subColor(p) + '"><h3>' + esc(p.name) + '</h3><div class="row">'
+      + '<button class="btn primary" data-act="greview" data-arg="' + p.id + '" ' + (r.items.length ? '' : 'disabled') + '>' + (r.items.length ? 'Ripassa ' + r.items.length + ' domande' : 'Nessuna lezione fatta') + '</button>'
+      + '<button class="btn ghost" data-act="gexam" data-arg="' + p.id + '" ' + (n ? '' : 'disabled') + '>Prova d’esame</button></div>'
+      + '<p class="meta">' + (r.items.length ? 'Domande delle ' + r.lessons + ' lezioni fatte, in ordine casuale.' : 'Completa una lezione per sbloccare il ripasso.') + (n ? ' Prova d’esame: ' + Math.min(EXAM_N, n) + ' domande dal paniere, ' + EXAM_MIN + ' minuti.' : '') + '</p></div>';
+  }).join('');
+  return '<h2 class="title">Studio</h2>'
+    + '<h3 class="shead" style="margin-top:4px">Studio oggi</h3><div class="slist">' + (cards || '<div class="empty">Nessuna lezione da studiare.</div>') + '</div>'
+    + '<h3 class="shead" id="ripasso">Ripasso</h3><div class="slist">' + (rev || '<div class="empty">Il ripasso si sblocca quando completi le prime lezioni.</div>') + '</div>';
+}
+
+/* Progressi: domande, lezioni e termini di ogni materia, dai dati salvati. */
+function vProgress(){
+  const all = totals(S.packs);
+  const groups = YEARS.map((label, i) => {
+    const packs = packsOfYear(i + 1).sort(byPriority); if (!packs.length) return '';
+    return '<div class="ygroup" style="--c:' + yearColor(i + 1) + '"><i></i>' + label + '</div><div class="slist">' + packs.map(p => {
+      const fam = familyOf(p), t = totals(fam), pairs = lessonPairs(p), ld = pairs.filter(([u, n]) => lessonProgress(u, n).done).length;
+      const g = fam.flatMap(u => u.glossary || []), gs = glossStats(g);
+      return '<div class="scard" style="--c:' + subColor(p) + '"><h3>' + esc(p.name) + (p.examDone ? ' · ✓ esame dato' : '') + '</h3>'
+        + '<span class="bar"><span style="width:' + t.pct + '%"></span></span><div class="grid2">'
+        + '<div class="mini-stat"><b>' + t.learned + '/' + t.total + '</b><span>domande imparate (' + t.pct + '%)</span></div>'
+        + '<div class="mini-stat"><b>' + ld + '/' + pairs.length + '</b><span>lezioni fatte</span></div>'
+        + (g.length ? '<div class="mini-stat"><b>' + gs.learned + '/' + g.length + '</b><span>termini imparati</span></div>' : '')
+        + '</div></div>';
+    }).join('') + '</div>';
+  }).join('');
+  return '<h2 class="title">Progressi</h2>'
+    + '<section class="panel"><div class="ptop">Progresso complessivo<b>' + all.pct + '%</b></div><span class="bar"><span style="width:' + all.pct + '%"></span></span><small>' + all.learned + ' domande imparate su ' + all.total + '</small></section>'
+    + (groups || '<div class="empty">Ancora nessuna materia.</div>');
+}
+
+/* Esami e piano di studio: data dell'esame, lezioni che mancano, lezioni al giorno. */
+function vExams(){
+  const tops = topPacks().sort((a, b) => ((a.examDone ? 1 : 0) - (b.examDone ? 1 : 0)) || (a.examDate || '9999').localeCompare(b.examDate || '9999') || byPriority(a, b));
+  const cards = tops.map(p => {
+    const pairs = lessonPairs(p), left = pairs.filter(([u, n]) => !lessonProgress(u, n).done).length, n = paniereItems(p).length;
+    let plan;
+    if (p.examDone) plan = '<p class="plan">✓ Esame dato.</p>';
+    else if (p.examDate){
+      const d = daysTo(p.examDate);
+      if (d < 0) plan = '<p class="plan">La data è passata: se l’hai dato, segnalo nella pagina della materia.</p>';
+      else plan = '<p class="plan">Esame ' + inDays(d) + '. ' + (pairs.length ? (left ? 'Mancano <b>' + left + '</b> lezioni' + (d > 0 ? ': circa <b>' + Math.ceil(left / d) + '</b> al giorno.' : '.') : 'Tutte le lezioni sono fatte: ripassa!') : '') + '</p>';
+    } else plan = '<p class="meta">' + (pairs.length ? left + ' lezioni da fare su ' + pairs.length + '. ' : '') + 'Imposta la data per avere il piano di studio.</p>';
+    return '<div class="scard" style="--c:' + subColor(p) + '"><h3>' + esc(p.name) + '</h3>'
+      + (p.examDone ? '' : '<label class="datefield">Data dell’esame<input type="date" class="exdate" data-pid="' + p.id + '" value="' + (p.examDate || '') + '"></label>')
+      + plan
+      + '<div class="row"><button class="btn ghost" data-act="open" data-arg="' + p.id + '">Apri materia</button>' + (n && !p.examDone ? '<button class="btn primary" data-act="gexam" data-arg="' + p.id + '">Prova d’esame</button>' : '') + '</div></div>';
+  }).join('');
+  return '<h2 class="title">Esami</h2><p class="note" style="margin-top:-8px">Piano di studio: imposta la data di ogni esame e ti dico quante lezioni fare al giorno.</p>'
+    + '<div class="slist">' + (cards || '<div class="empty">Ancora nessuna materia.</div>') + '</div>';
+}
+
+/* Barra di navigazione in basso. */
+const NAV = [['home', 'home', 'Home'], ['subjects', 'layers', 'Materie'], ['study', 'open', 'Studio'], ['progress', 'chart', 'Progressi'], ['exams', 'cap', 'Esami']];
+const navOf = (v) => ({ year: 'subjects', pack: 'subjects', lesson: 'subjects', add: 'subjects', answers: 'subjects', edit: 'subjects', gadd: 'subjects', gedit: 'subjects', openlist: 'subjects', settings: 'home' })[v] || v;
+function renderNav(){
+  const nav = $('#nav'); if (!nav) return;
+  nav.hidden = ['quiz', 'results', 'loading', 'build'].includes(S.view);
+  const cur = navOf(S.view);
+  nav.innerHTML = NAV.map(([v, ic, label]) => '<button data-nav="' + v + '"' + (cur === v ? ' aria-current="page"' : '') + '>' + ico(ic) + '<span>' + label + '</span></button>').join('');
+}
+
+/* Scheda di una materia (nella pagina dell'anno e in «Materie»). */
+function subjCard(p){
+  if (isContainer(p)) return unitCard(p);
+  const st = stats(p), pct = p.qs.length ? Math.round(st.learned / p.qs.length * 100) : 0, n = sourcesOf(p).length;
+  return `<button class="pack sub${p.examDone ? ' faded' : ''}" style="--c:${subColor(p)}" data-act="open" data-arg="${p.id}">
+      <span class="badge">${esc(initials(p.name))}</span>
+      <span class="pack-kind">${p.examDone ? '✓ Esame dato' : !p.qs.length ? ((p.glossary || []).length ? 'Glossario' : 'Da caricare') : n > 1 ? n + ' fonti' : (p.kind === 'lezione' ? 'Lezione' : 'Paniere')}</span>
+      <span class="pack-name">${esc(p.name)}</span>
+      <span class="pack-meta">${p.qs.length ? `${p.qs.length} ${p.qs.length === 1 ? 'domanda' : 'domande'}, ${pct}% imparate` : ((p.glossary || []).length ? `${p.glossary.length} termini nel glossario` : 'Nessuna domanda: tocca per caricare il paniere')}</span>
+      <span class="bar"><span style="width:${pct}%"></span></span></button>`;
+}
 /* Riquadro riassuntivo di una materia divisa in parti, o di una singola parte. */
 function unitCard(p){
   const fam = isContainer(p) ? unitsOf(p) : [p];
@@ -967,17 +1192,7 @@ function vSubject(p){
 function vYear(){
   S.examNo = null;
   const y = S.year, packs = packsOfYear(y).sort(byPriority);
-  const list = packs.map(p => {
-    if (isContainer(p)) return unitCard(p, 'open');
-    const st = stats(p); const pct = p.qs.length ? Math.round(st.learned / p.qs.length * 100) : 0;
-    const n = sourcesOf(p).length;
-    return `<button class="pack sub${p.examDone ? ' faded' : ''}" style="--c:${subColor(p)}" data-act="open" data-arg="${p.id}">
-      <span class="badge">${esc(initials(p.name))}</span>
-      <span class="pack-kind">${!p.qs.length ? ((p.glossary || []).length ? 'Glossario' : 'Da caricare') : n > 1 ? n + ' fonti' : (p.kind === 'lezione' ? 'Lezione' : 'Paniere')}</span>
-      <span class="pack-name">${esc(p.name)}</span>
-      <span class="pack-meta">${p.qs.length ? `${p.qs.length} ${p.qs.length === 1 ? 'domanda' : 'domande'}, ${pct}% imparate` : ((p.glossary || []).length ? `${p.glossary.length} termini nel glossario` : 'Nessuna domanda: tocca per caricare il paniere')}</span>
-      <span class="bar"><span style="width:${pct}%"></span></span></button>`;
-  }).join('');
+  const list = packs.map(subjCard).join('');
   return `${back('home')}<h2 class="title">${YEARS[y - 1]}</h2>
     ${y === 1 ? '' : '<button class="btn primary wide" data-act="add">Nuova materia</button>'}
     ${packs.length ? `<h3 class="sec">Materie</h3><div class="packs">${list}</div>`
@@ -1601,6 +1816,10 @@ function render(){
   let html;
   switch (S.view){
     case 'home': html = vHome(); break;
+    case 'subjects': html = vSubjects(); break;
+    case 'study': html = vStudy(); break;
+    case 'progress': html = vProgress(); break;
+    case 'exams': html = vExams(); break;
     case 'year': html = vYear(); break;
     case 'settings': html = vSettings(); break;
     case 'add': html = vAdd(); break;
@@ -1620,13 +1839,23 @@ function render(){
   const c = S.view === 'year' ? yearColor(S.year) : cp ? subColor(cp) : '';
   if (c) app.style.setProperty('--c', c); else app.style.removeProperty('--c');
   app.classList.toggle('tinted', !!c);
+  app.classList.toggle('enter', S.view !== lastView);
   app.innerHTML = html;
+  renderNav();
   if (S.view !== lastView){ window.scrollTo(0, 0); lastView = S.view; }
 }
 
 /* ---------- azioni ---------- */
 const H = {
-  home(){ S.view = 'home'; render(); },
+  home(){ S.session = null; S.view = 'home'; render(); },
+  subjects(){ S.session = null; S.view = 'subjects'; render(); },
+  study(){ S.session = null; S.view = 'study'; render(); },
+  ripasso(){ S.session = null; S.view = 'study'; render(); const r = $('#ripasso'); if (r) r.scrollIntoView({ behavior: 'smooth', block: 'start' }); },
+  progress(){ S.session = null; S.view = 'progress'; render(); },
+  exams(){ S.session = null; S.view = 'exams'; render(); },
+  golesson(arg){ const [top, rest] = String(arg).split('|'); S.pid = top; S.part = 'lessons'; H.lesson(rest); },
+  greview(id){ S.pid = id; H.review(); },
+  gexam(id){ S.pid = id; H.examall(); },
   year(y){ S.year = fixYear(y); S.session = null; S.view = 'year'; render(); },
   settings(){ S.keyMsg = ''; S.view = 'settings'; render(); },
   add(){ const f = S.add; S.add = blankAdd({ year: S.year, kind: f.kind, reader: f.reader, n: f.n, qtype: f.qtype }); S.view = 'add'; render(); },
@@ -1893,8 +2122,10 @@ app.addEventListener('input', (e) => {
   if (e.target.id === 'g-search') filterGloss(e.target.value);
   if (e.target.id === 'ans' && S.session) S.session.draft = e.target.value;
 });
+$('#nav').addEventListener('click', (e) => { const b = e.target.closest('[data-nav]'); if (b) H[b.dataset.nav](); });
 app.addEventListener('change', (e) => {
   const id = e.target.id;
+  if (e.target.classList.contains('exdate')){ const p = packOf(e.target.dataset.pid); if (p){ p.examDate = e.target.value || ''; savePack(p); toast(p.examDate ? 'Data dell’esame salvata' : 'Data dell’esame tolta'); render(); } return; }
   if (e.target.dataset && e.target.dataset.kp !== undefined && S.session){ const k = +e.target.dataset.kp; (S.session.checked = S.session.checked || [])[k] = e.target.checked; e.target.closest('.kp').classList.toggle('on', e.target.checked); return; }
   if (id === 'f-file'){
     syncAdd();
