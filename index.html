@@ -1097,8 +1097,11 @@ const ILLU = '<svg class="illu" viewBox="0 0 58 44" fill="none" aria-hidden="tru
 const AVATAR = '<img class="avatar" src="img/marcy.webp" alt="" width="96" height="96">';
 
 /* Statistiche reali: tutte le domande dei panieri e delle lezioni caricate. */
+/* Domande dei panieri (imparate = 3 risposte giuste di fila) + domande delle lezioni (imparate = ultima risposta giusta, come per «lezione fatta»). */
 function totals(list){
-  const total = list.reduce((n, p) => n + p.qs.length, 0), learned = list.reduce((n, p) => n + stats(p).learned, 0);
+  const lq = (p) => (p.pretest || []).flatMap(L => L.qs);
+  const total = list.reduce((n, p) => n + p.qs.length + lq(p).length, 0);
+  const learned = list.reduce((n, p) => n + stats(p).learned + lq(p).filter(q => q.s && q.s.t && q.s.b >= 1).length, 0);
   return { total, learned, pct: total ? Math.round(learned / total * 100) : 0 };
 }
 const topPacks = () => S.packs.filter(p => !p.parent);
