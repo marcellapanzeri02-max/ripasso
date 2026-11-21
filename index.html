@@ -424,6 +424,9 @@ header.welcome .avatar{width:96px;height:96px;border:3px solid rgba(255,165,46,.
 header.welcome .brand h1{font:900 30px/1 "Nunito",system-ui,sans-serif;letter-spacing:.07em}
 header.welcome .brand span{display:block;font:800 15px/1.2 "Nunito",system-ui,sans-serif;color:var(--orange);letter-spacing:.04em;margin-top:5px}
 header.welcome .iconbtn{position:absolute;top:10px;right:10px;width:38px;height:38px}
+.ltag{display:inline-flex;align-items:center;gap:6px;margin:0 0 10px;padding:5px 11px;border-radius:999px;border:1px solid color-mix(in srgb,var(--c,var(--orange)) 55%,transparent);background:color-mix(in srgb,var(--c,var(--orange)) 16%,transparent);color:var(--ink);font:800 13px/1.2 "Nunito",system-ui,sans-serif;cursor:pointer}
+.ltag .ico{width:15px;height:15px}
+span.ltag{cursor:default}
 </style>
 </head>
 <body>
@@ -1597,6 +1600,15 @@ function openAudio(p, q){
   const m = top && OPEN_AUDIO[top.name.trim().toUpperCase()];
   return (m && m[q]) || '';
 }
+/* Lezione in cui si trova la risposta di ogni domanda aperta (numero, o intervallo se non è sicura). */
+const OPEN_LESSON = {"Qual è la principale differenza tra comunicazione diadica e comunicazione triadica?":2,"Qual è la differenza tra aritmetica e linguaggio naturale?":3,"Cosa si intende per dipendenza dal contesto?":3,"Qual è la principale differenza tra fonetica articolatoria e fonetica uditiva?":9,"Cos’è il punto di articolazione?":14,"Cos’è il modo di articolazione?":14,"Che cos’è un fonema?":17,"Cosa sono gli allofoni?":19,"Cosa sono le coppie minime?":18,"Qual è la differenza tra morfo e morfema?":26,"Cosa sono gli allomorfi?":26,"Qual è la differenza tra morfo lessicale e morfo grammaticale?":26,"Qual è la differenza tra soggetto e predicato?":35,"Cosa si intende per reggenza?":37,"Cosa si intende per povertà dello stimolo?":34,"Che cos’è l’omonimia?":44,"Che cos’è una metafora?":42,"Qual è la differenza tra significato denotativo e significato connotativo?":46,"Ubicazione, direzione e distanza nella geografia culturale":3,"Qual è il nesso fra cultura e radici?":4,"Qual è il significato di luogo in geografia culturale?":2,"Esempi di trasmissione dei modelli di comportamento":6,"Perché l’uomo emigra?":"7-8","Valenza dell’interazione spaziale":7,"Caratteri delle migrazioni":9,"Ernest Ravenstein e le leggi della migrazione":11,"Si spieghi il concetto di razza e quello di etnia":12,"Vulnerabilità femminile nelle migrazioni":11,"Influenza della religione nella vita dell’uomo":17,"Caratteri generali delle principali religioni nel mondo":18,"Cosa si intende per fondamentalismo religioso":20,"Analisi dei livelli di salute contemporanei":21,"Le principali malattie dei paesi sviluppati":22,"World System Theory":"25-32","Concetto di devolution":26,"I confini nella storia e oggi":26,"Il ruolo che riveste l’ONU":27,"L’Unione Europea":28,"Modelli relativi alla struttura di uso del territorio urbano":33,"Si tratti la prima rivoluzione urbana":34,"Principali aree sociali di una città":35,"Cosa si intende con geografia dei beni culturali?":35,"Le potenzialità del fenomeno turismo":39,"Ruolo dell’OMT":41,"La crocieristica":42,"Concetto di turismo responsabile":43,"Il turismo estremo":43,"Fenomeno dello slum o trash tourism":44};
+/* Etichetta «Lezione N»: se la lezione esiste nella materia, toccandola si apre. */
+function openLessonTag(p, q){
+  const n = OPEN_LESSON[q]; if (n === undefined) return '';
+  const top = p.parent ? packOf(p.parent) : p, u = typeof n === 'number' && (top ? familyOf(top) : [p]).find(x => lessonNums(x).includes(n));
+  return u ? `<button class="ltag" data-act="golesson" data-arg="${top.id}|${u.id}:${n}">${ico('open')} Risposta nella lezione ${n}</button>`
+    : `<span class="ltag">${ico('open')} Risposta nelle lezioni ${n}</span>`;
+}
 function vOpen(){
   const p = packOf(S.pid), o = (p && p.open) || [];
   if (!p){ S.view = 'home'; return vHome(); }
@@ -1604,6 +1616,7 @@ function vOpen(){
   <p class="lede">${esc(p.name)} · ${o.length} ${o.length === 1 ? 'domanda' : 'domande'} con la risposta completa. L’audio legge domanda e risposta.</p>
   ${o.map((q, i) => { const src = openAudio(p, q.q); return `<article class="qcard openq">
     <p class="q">${i + 1}. ${esc(q.q)}</p>
+    ${openLessonTag(p, q.q)}
     ${src ? `<audio controls preload="none" src="${esc(src)}" style="width:100%"></audio>` : ''}
     <div class="model"><b>Risposta</b><p>${esc(q.r)}</p></div></article>`; }).join('')}`;
 }
