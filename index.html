@@ -1639,13 +1639,14 @@ function lessonNums(p){
 }
 const pretestOf = (p, n) => (p.pretest || []).find(x => x.n === n);
 const lessonTerms = (p, n) => (p.glossary || []).filter(t => lessonNo(t) === n);
-/* Una lezione è fatta quando tutte le sue domande hanno l'ultima risposta giusta e tutti i suoi termini l'ultima volta erano «me la ricordo».
+/* Una lezione è fatta quando hai risposto almeno una volta a tutte le sue domande e visto tutti i suoi termini (anche con errori: gli errori restano nel ripasso).
    Una lezione senza domande né termini è fatta quando è segnata come vista (p.viewed). */
 function lessonProgress(p, n){
   const L = pretestOf(p, n), qs = L ? L.qs : [], terms = lessonTerms(p, n), items = qs.concat(terms);
   const ok = items.filter(x => x.s.t && x.s.b >= 1).length;
   const viewed = (p.viewed || []).includes(n);
-  return { L, qs, terms, imgs: lessonImages(p, n), total: items.length, viewed, pct: items.length ? Math.round(ok / items.length * 100) : 0, done: items.length ? ok === items.length : viewed };
+  const seen = items.filter(x => x.s.t).length;
+  return { L, qs, terms, imgs: lessonImages(p, n), total: items.length, viewed, ok, pct: items.length ? Math.round(seen / items.length * 100) : 0, done: items.length ? seen === items.length : viewed };
 }
 function vLessons(pairs){
   const card = ([p, n]) => {
@@ -3072,7 +3073,7 @@ async function seedVerified(){
         if (d >= 0 && it.a !== d){ it.o.splice(d, 1); if (it.a > d) it.a--; changed = true; }
         /* risposta corretta diversa da quella scelta: la cambio e azzero i progressi della domanda */
         const right = seed.fix && seed.fix[it.q], k = right ? it.o.indexOf(right) : -1;
-        if (k >= 0 && it.a !== k){ it.a = k; it.s = { c: 0, w: 0, b: 0, t: 0 }; changed = true; }
+        if (k >= 0 && it.a !== k){ it.a = k; it.s = { c: 0, w: it.s.t ? 1 : 0, b: 0, t: it.s.t }; changed = true; }
       }
       if (changed) await savePack(u);
     }
