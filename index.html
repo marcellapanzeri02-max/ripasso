@@ -1309,11 +1309,12 @@ function vSubject(p){
   </div>
   <h3 class="sec">Paniere per parti</h3>
   <div class="packs">${units.map(u => {
-    const st = stats(u), pct = u.qs.length ? Math.round(st.learned / u.qs.length * 100) : 0;
+    /* una parte è completata quando hai risposto almeno una volta a tutte le sue domande, anche con errori */
+    const st = stats(u), n = u.qs.length, seen = n - st.unseen, done = n > 0 && seen === n, pct = n ? Math.round(seen / n * 100) : 0, lp = n ? Math.round(st.learned / n * 100) : 0;
     return `<button class="pack" data-act="open" data-arg="${u.id}">
-      <span class="pack-name">${esc(u.name)}</span>
-      <span class="pack-kind">${u.qs.length ? `${u.qs.length} domande · ${pct}% imparate` : 'Domande in arrivo'}</span>
-      ${u.qs.length ? `<span class="bar"><span style="width:${pct}%"></span></span>` : ''}</button>`;
+      <span class="pack-name">${done ? '✓ ' : ''}${esc(u.name)}</span>
+      <span class="pack-kind">${n ? (done ? `Completata · ${n} domande · ${lp}% imparate` : `${seen} di ${n} domande fatte · ${lp}% imparate`) : 'Domande in arrivo'}</span>
+      ${n ? `<span class="bar"><span style="width:${pct}%"></span></span>` : ''}</button>`;
   }).join('')}</div>`;
   return head + exam + body + foot;
 }
