@@ -427,6 +427,17 @@ header.welcome .iconbtn{position:absolute;top:10px;right:10px;width:38px;height:
 .ltag{display:inline-flex;align-items:center;gap:6px;margin:0 0 10px;padding:5px 11px;border-radius:999px;border:1px solid color-mix(in srgb,var(--c,var(--orange)) 55%,transparent);background:color-mix(in srgb,var(--c,var(--orange)) 16%,transparent);color:var(--ink);font:800 13px/1.2 "Nunito",system-ui,sans-serif;cursor:pointer}
 .ltag .ico{width:15px;height:15px}
 span.ltag{cursor:default}
+/* domande aperte: etichette, risposta a tendina, memorizzata */
+.oqtags{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:6px}
+.oqtags .ltag{margin:0}
+.memtag{font:800 12px/1.2 "Nunito",system-ui,sans-serif;padding:5px 10px;border-radius:999px;color:var(--muted);border:1px solid var(--line)}
+.memtag.ok{color:#0B2A1E;background:#3ECF8E;border-color:#3ECF8E}
+.oqans{margin-top:6px;border-top:1px solid var(--line)}
+.oqans summary{cursor:pointer;list-style:none;padding:12px 0 4px;font:800 15px/1.2 "Nunito",system-ui,sans-serif;color:var(--orange);min-height:28px}
+.oqans summary::-webkit-details-marker{display:none}
+.oqans summary::after{content:" ▾"}
+.oqans[open] summary::after{content:" ▴"}
+.memrow{margin-top:12px;flex-wrap:wrap}
 </style>
 </head>
 <body>
@@ -1283,6 +1294,14 @@ function reviewItems(p){
 const EXAM_N = 24, EXAM_MIN = 30;
 const paniereItems = (p) => (isContainer(p) ? unitsOf(p) : [p]).flatMap(u => u.qs).filter(q => isMC(q) && q.a !== null);
 const clock = (ms) => { const t = Math.max(0, Math.ceil(ms / 1000)); return Math.floor(t / 60) + ':' + String(t % 60).padStart(2, '0'); };
+/* Paniere: domande chiuse (quiz per parte) o domande aperte (elenco per parte) */
+function qtypeSeg(units){
+  const nc = units.reduce((n, u) => n + u.qs.length, 0), no = units.reduce((n, u) => n + (u.open || []).length, 0);
+  return `<div class="seg tabs" role="radiogroup" aria-label="Tipo di domande" style="margin-top:14px">
+    <button role="radio" aria-checked="${S.qtype !== 'open'}" data-act="qtype" data-arg="closed">Domande chiuse<small>${nc} domande</small></button>
+    <button role="radio" aria-checked="${S.qtype === 'open'}" data-act="qtype" data-arg="open">Domande aperte<small>${no} domande</small></button>
+  </div>`;
+}
 function vSubject(p){
   const units = unitsOf(p), g = glossOf(p), lessons = units.flatMap(u => lessonNums(u).map(n => [u, n]));
   if (!['lessons', 'quiz'].includes(S.part)) S.part = 'lessons';
@@ -1297,21 +1316,29 @@ function vSubject(p){
     : allDone && S.examNo !== p.id ? `<div class="exambox"><p><b>ESAME DATO?</b> Hai completato tutte le lezioni.</p>
       <div class="row"><button class="btn primary" data-act="examyes">Sì, l’ho dato</button><button class="btn ghost" data-act="examno">No, non ancora</button></div></div>` : '';
   const rev = reviewItems(p);
-  const foot = `<div class="modes" style="margin-top:26px">
+  const foot = `${S.part === 'lessons' ? `<div class="modes" style="margin-top:26px">
     <button class="mode primary" data-act="review" ${rev.items.length ? '' : 'disabled'}><b>Quiz su tutte le lezioni studiate</b><span>${rev.items.length ? `${rev.items.length} domande dalle ${rev.lessons} lezioni fatte, in ordine casuale` : 'Completa almeno una lezione per sbloccarlo'}</span></button>
-  </div>
+  </div>` : ''}
   <button class="danger-link" data-act="del" data-arg="${p.id}">Elimina questa materia</button>`;
   let body;
   if (S.part === 'lessons') body = vLessons(lessons);
-  else body = `<div class="modes" style="margin-top:18px">
-    ${(() => { const n = paniereItems(p).length; return `<button class="mode primary" data-act="examall" ${n ? '' : 'disabled'}><b>Domande da paniere</b><span>${n ? `${Math.min(EXAM_N, n)} domande miste da tutti i panieri caricati (${n} in tutto), ${EXAM_MIN} minuti di tempo, correzione alla fine` : 'Domande in arrivo'}</span></button>`; })()}
-    <button class="mode" data-act="gquiz" data-arg="mc" ${g.length >= 4 ? '' : 'disabled'}><b>Quiz sui termini</b><span>${g.length >= 4 ? `Leggi la definizione e scegli il termine giusto, tra i ${g.length} termini del glossario` : 'Termini in arrivo'}</span></button>
-  </div>
-  <h3 class="sec">Paniere per parti</h3>
+  else if (S.qtype === 'open'){
+    /* Domande aperte: le parti; dentro, l'elenco delle domande con la risposta a tendina */
+    const nOpen = units.reduce((n, u) => n + (u.open || []).length, 0);
+    body = `${qtypeSeg(units)}
+  <div class="packs">${units.map(u => {
+    const o = u.open || [], n = o.length, mem = o.filter(q => q.mem === true).length, done = n > 0 && mem === n, pct = n ? Math.round(mem / n * 100) : 0;
+    return `<button class="pack" data-act="popen" data-arg="${u.id}" ${n ? '' : 'disabled'}>
+      <span class="pack-name">${done ? '✓ ' : ''}${esc(u.name)}</span>
+      <span class="pack-kind">${n ? `${n} ${n === 1 ? 'domanda' : 'domande'} · ${mem} memorizzate` : 'Domande in arrivo'}</span>
+      ${n ? `<span class="bar"><span style="width:${pct}%"></span></span>` : ''}</button>`;
+  }).join('')}</div>${nOpen ? '' : '<div class="empty">Le domande aperte sono in arrivo.</div>'}`;
+  }
+  else body = `${qtypeSeg(units)}
   <div class="packs">${units.map(u => {
     /* una parte è completata quando hai risposto almeno una volta a tutte le sue domande, anche con errori */
     const st = stats(u), n = u.qs.length, seen = n - st.unseen, done = n > 0 && seen === n, pct = n ? Math.round(seen / n * 100) : 0, lp = n ? Math.round(st.learned / n * 100) : 0;
-    return `<button class="pack" data-act="open" data-arg="${u.id}">
+    return `<button class="pack" data-act="pquiz" data-arg="${u.id}" ${n ? '' : 'disabled'}>
       <span class="pack-name">${done ? '✓ ' : ''}${esc(u.name)}</span>
       <span class="pack-kind">${n ? (done ? `Completata · ${n} domande · ${lp}% imparate` : `${seen} di ${n} domande fatte · ${lp}% imparate`) : 'Domande in arrivo'}</span>
       ${n ? `<span class="bar"><span style="width:${pct}%"></span></span>` : ''}</button>`;
@@ -1424,6 +1451,8 @@ function vPack(){
   const p = packOf(S.pid); if (!p){ S.view = 'home'; return vHome(); }
   if (isContainer(p)) return vSubject(p);
   const parent = p.parent ? packOf(p.parent) : null;
+  /* una parte non ha più una pagina sua: si torna al paniere della materia (domande chiuse o aperte) */
+  if (parent){ S.pid = parent.id; S.part = 'quiz'; return vSubject(parent); }
   const st = stats(p), srcs = sourcesOf(p), c = S.custom;
   const mcq = p.qs.filter(q => isMC(q) && q.a !== null).length;
   const est = p.qs.filter(q => isMC(q) && q.a !== null && !q.m).length;
@@ -1460,7 +1489,7 @@ function vPack(){
     <div><b>${p.qs.length}</b><span>domande</span></div><div><b>${st.learned}</b><span>imparate</span></div>
     <div><b>${st.toReview}</b><span>da ripassare</span></div><div><b>${st.unseen}</b><span>mai viste</span></div></div>
   <div class="modes">
-    <button class="mode primary" data-act="quiz" data-arg="smart"><b>Ripasso intelligente</b><span>${Math.min(20, p.qs.length)} domande, più spesso quelle che sbagli</span></button>
+    <button class="mode primary" data-act="quiz" data-arg="all"><b>Tutte le domande</b><span>Le ${p.qs.length} domande del paniere, in ordine, correzione subito</span></button>
     <button class="mode" data-act="quiz" data-arg="exam" ${mcq ? '' : 'disabled'}><b>Simulazione d’esame</b><span>${Math.min(30, mcq)} domande a scelta multipla, correzione alla fine</span></button>
     ${(() => { const o = p.open || []; return parent ? `<button class="mode" data-act="opentest" ${o.length ? '' : 'disabled'}><b>Domande aperte</b><span>${o.length ? `${o.length} domande con risposta completa e audio` : 'Domande in arrivo'}</span></button>` : ''; })()}
   </div>
@@ -1620,13 +1649,20 @@ function openLessonTag(p, q){
 function vOpen(){
   const p = packOf(S.pid), o = (p && p.open) || [];
   if (!p){ S.view = 'home'; return vHome(); }
-  return `${back('open', p.id)}<h2 class="title">Domande aperte</h2>
-  <p class="lede">${esc(p.name)} · ${o.length} ${o.length === 1 ? 'domanda' : 'domande'} con la risposta completa. L’audio legge domanda e risposta.</p>
-  ${o.map((q, i) => { const src = openAudio(p, q.q); return `<article class="qcard openq">
+  const parent = p.parent ? packOf(p.parent) : null, mem = o.filter(q => q.mem === true).length;
+  return `${parent ? back('openpart', parent.id) : back('open', p.id)}<p class="crumb">${parent ? esc(parent.name) + ' · ' : ''}Domande aperte</p><h2 class="title">${esc(p.name)}</h2>
+  <p class="lede">${o.length} ${o.length === 1 ? 'domanda' : 'domande'} · ${mem} memorizzate. Tocca «Risposta» per aprirla; in fondo segna se l’hai memorizzata.</p>
+  ${o.map((q, i) => { const src = openAudio(p, q.q), k = 'oq-' + p.id + '-' + i; return `<article class="qcard openq">
     <p class="q">${i + 1}. ${esc(q.q)}</p>
-    ${openLessonTag(p, q.q)}
-    ${src ? `<audio controls preload="none" src="${esc(src)}" style="width:100%"></audio>` : ''}
-    <div class="model"><b>Risposta</b><p>${esc(q.r)}</p></div></article>`; }).join('')}`;
+    <div class="oqtags">${openLessonTag(p, q.q)}<span class="memtag${q.mem === true ? ' ok' : ''}">${q.mem === true ? '✓ Memorizzata' : 'Da memorizzare'}</span></div>
+    <details class="oqans" data-key="${k}" ${S.open.has(k) ? 'open' : ''}><summary>Risposta</summary>
+      ${src ? `<audio controls preload="none" src="${esc(src)}" style="width:100%;margin-top:8px"></audio>` : ''}
+      <div class="model"><p>${esc(q.r)}</p></div>
+      <div class="row memrow">
+        <button class="btn ${q.mem === true ? 'primary' : 'ghost'}" data-act="omem" data-arg="${i}:1">✓ Memorizzata</button>
+        <button class="btn ${q.mem === false ? 'primary' : 'ghost'}" data-act="omem" data-arg="${i}:0">Non memorizzata</button>
+      </div>
+    </details></article>`; }).join('')}`;
 }
 function lessonImages(p, n){
   const top = p.parent ? packOf(p.parent) : p;
@@ -1951,7 +1987,7 @@ function vResults(){
   const right = graded.filter(r => r.ok).length;
   const wrong = s.res.filter(r => r.ok === false);
   const pct = graded.length ? right / graded.length : 0;
-  const msg = !graded.length ? 'Sessione finita.' : pct >= 0.9 ? 'Ottimo, queste le sai.' : pct >= 0.6 ? 'Buona base: ripassa gli errori qui sotto.' : (s.items ? 'C’è ancora da lavorare: ripassa i termini qui sotto.' : 'C’è ancora da lavorare: il ripasso intelligente ti riproporrà queste domande.');
+  const msg = !graded.length ? 'Sessione finita.' : pct >= 0.9 ? 'Ottimo, queste le sai.' : pct >= 0.6 ? 'Buona base: ripassa gli errori qui sotto.' : (s.items ? 'C’è ancora da lavorare: ripassa i termini qui sotto.' : 'C’è ancora da lavorare: ripassa gli errori qui sotto.');
   return `<div class="result"><p class="big">${right}<span>/${graded.length}</span></p><p class="lede" style="margin:12px auto 0">${msg}</p></div>
   ${wrong.length ? `<h3 class="sec">Da rivedere</h3><ol class="review">${wrong.map(r => { const q = itemsOf(s)[r.qi]; return `<li><p><b>${esc(q.q)}</b></p>${isMC(q)
       ? `${r.chosen != null ? `<p class="yours">La tua: ${esc(q.o[r.chosen])}</p>` : ''}<p class="ans">Giusta: <span class="hlt">${esc(q.o[q.a])}</span></p>`
@@ -2161,6 +2197,21 @@ const H = {
     const items = shuffle(all.slice()).slice(0, EXAM_N);
     S.session = { pid: p.id, kind: 'exam', timed: true, deadline: Date.now() + EXAM_MIN * 60000, items, list: items.map((_, i) => i), i: 0, res: [] };
     setupQ(); S.view = 'quiz'; render();
+  },
+  qtype(x){ S.qtype = x === 'open' ? 'open' : 'closed'; render(); },
+  /* domande chiuse di una parte: tutte, nell'ordine del paniere, correzione subito */
+  pquiz(id){ const p = packOf(id); if (!p) return; S.pid = id; S.qtype = 'closed'; startQuiz('all'); },
+  popen(id){ const p = packOf(id); if (!p) return; S.pid = id; S.qtype = 'open'; H.opentest(); },
+  omem(arg, el){
+    const [i, v] = String(arg).split(':'), p = packOf(S.pid), q = p && (p.open || [])[+i]; if (!q) return;
+    q.mem = v === '1'; savePack(p);
+    /* aggiorno solo la domanda, così la tendina resta aperta */
+    const art = el && el.closest('article');
+    if (art){
+      art.querySelectorAll('[data-act="omem"]').forEach(b => b.classList.toggle('primary', b.dataset.arg === arg));
+      art.querySelectorAll('[data-act="omem"]').forEach(b => b.classList.toggle('ghost', b.dataset.arg !== arg));
+      const tag = art.querySelector('.memtag'); if (tag){ tag.textContent = q.mem ? '✓ Memorizzata' : 'Da memorizzare'; tag.classList.toggle('ok', q.mem); }
+    } else render();
   },
   opentest(){
     const p = packOf(S.pid), o = (p && p.open) || [];
